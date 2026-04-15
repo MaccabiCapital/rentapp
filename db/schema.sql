@@ -234,10 +234,12 @@ create table public.prospects (
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  deleted_at timestamptz,                 -- soft-delete kept for fair-housing audit trail
   converted_to_tenant_id uuid references public.tenants(id) on delete set null
 );
 
-create index prospects_owner_idx on public.prospects (owner_id);
+create index prospects_owner_idx on public.prospects (owner_id) where deleted_at is null;
+create index prospects_owner_active_idx on public.prospects (owner_id) where deleted_at is null;
 create index prospects_unit_idx on public.prospects (unit_id);
 create index prospects_stage_idx on public.prospects (stage);
 

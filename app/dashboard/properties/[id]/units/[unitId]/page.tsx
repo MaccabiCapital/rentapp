@@ -73,6 +73,14 @@ export default async function UnitDetailPage({
           </div>
         </div>
         <div className="flex items-start gap-2">
+          {(unit.status === 'vacant' || unit.status === 'notice_given') && (
+            <Link
+              href={`/dashboard/prospects/new?unit=${unit.id}`}
+              className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+            >
+              Track prospect
+            </Link>
+          )}
           <Link
             href={`/dashboard/properties/${property.id}/units/${unit.id}/edit`}
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
