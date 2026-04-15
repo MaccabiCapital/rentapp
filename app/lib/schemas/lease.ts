@@ -143,6 +143,7 @@ export type Lease = {
   late_fee_grace_days: number | null
   document_url: string | null
   signed_at: string | null
+  tenant_notice_given_on: string | null
   notes: string | null
   created_at: string
   updated_at: string

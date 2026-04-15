@@ -76,7 +76,9 @@ export async function getLeaseWithRelations(
 ): Promise<
   | (Lease & {
       tenant: Tenant
-      unit: Unit & { property: Pick<Property, 'id' | 'name'> }
+      unit: Unit & {
+        property: Pick<Property, 'id' | 'name' | 'state'>
+      }
     })
   | null
 > {
@@ -84,7 +86,7 @@ export async function getLeaseWithRelations(
   const { data, error } = await supabase
     .from('leases')
     .select(
-      '*, tenant:tenants!inner(*), unit:units!inner(*, property:properties!inner(id, name))',
+      '*, tenant:tenants!inner(*), unit:units!inner(*, property:properties!inner(id, name, state))',
     )
     .eq('id', id)
     .is('deleted_at', null)

@@ -259,3 +259,162 @@ export async function deleteLease(leaseId: string): Promise<ActionState> {
   revalidatePath(`/dashboard/tenants/${existing.tenant_id}`)
   redirect(`/dashboard/tenants/${existing.tenant_id}`)
 }
+
+// Record that a tenant gave notice on a specific date. Flips the
+// unit status to 'notice_given' so the rent roll shows it clearly.
+// The lease stays 'active' until the end_date — the tenant is
+// still paying rent until they leave.
+export async function recordTenantNotice(
+  leaseId: string,
+  noticeDateIso: string | null,
+): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const { data: existing } = await supabase
+    .from('leases')
+    .select('unit_id, tenant_id, status')
+    .eq('id', leaseId)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (!existing) return { success: false, message: 'Lease not found.' }
+
+  const noticeDate = noticeDateIso ?? new Date().toISOString().slice(0, 10)
+
+  const { error } = await supabase
+    .from('leases')
+    .update({ tenant_notice_given_on: noticeDate })
+    .eq('id', leaseId)
+  if (error) {
+    return { success: false, message: `Failed to record notice: ${error.message}` }
+  }
+
+  // Flip unit to notice_given IF lease is still active. Skip if
+  // already terminated/expired — unit would be vacant by then.
+  if (existing.status === 'active') {
+    await supabase
+      .from('units')
+      .update({ status: 'notice_given' })
+      .eq('id', existing.unit_id)
+  }
+
+  revalidatePath('/dashboard/properties')
+  revalidatePath('/dashboard/renewals')
+  revalidatePath(`/dashboard/tenants/${existing.tenant_id}`)
+  revalidatePath(`/dashboard/tenants/${existing.tenant_id}/leases/${leaseId}`)
+  return { success: true }
+}
+
+// Clear the tenant-notice flag (tenant changed their mind) and
+// flip the unit back to occupied.
+export async function clearTenantNotice(
+  leaseId: string,
+): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const { data: existing } = await supabase
+    .from('leases')
+    .select('unit_id, tenant_id, status')
+    .eq('id', leaseId)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (!existing) return { success: false, message: 'Lease not found.' }
+
+  const { error } = await supabase
+    .from('leases')
+    .update({ tenant_notice_given_on: null })
+    .eq('id', leaseId)
+  if (error) {
+    return { success: false, message: 'Failed to clear notice.' }
+  }
+
+  if (existing.status === 'active') {
+    await supabase
+      .from('units')
+      .update({ status: 'occupied' })
+      .eq('id', existing.unit_id)
+  }
+
+  revalidatePath('/dashboard/properties')
+  revalidatePath('/dashboard/renewals')
+  revalidatePath(`/dashboard/tenants/${existing.tenant_id}/leases/${leaseId}`)
+  return { success: true }
+}
+
+// Start a renewal offer: clone the current lease as a new draft
+// with end_date bumped 12 months, and redirect to the edit page.
+// If state rent-cap rules exist for the property's state, we
+// surface the allowed max increase on the new lease's notes so
+// the landlord sees it when editing.
+export async function startRenewal(
+  leaseId: string,
+): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, message: 'Not signed in.' }
+
+  // Fetch current lease + the property state (for rent cap lookup)
+  const { data: current } = await supabase
+    .from('leases')
+    .select(
+      'unit_id, tenant_id, monthly_rent, security_deposit, rent_due_day, late_fee_amount, late_fee_grace_days, end_date, unit:units(property:properties(state))',
+    )
+    .eq('id', leaseId)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (!current) return { success: false, message: 'Lease not found.' }
+
+  // Compute new dates: start = current end_date + 1 day, end = +12 months
+  const currentEnd = new Date(current.end_date)
+  const newStart = new Date(currentEnd)
+  newStart.setUTCDate(newStart.getUTCDate() + 1)
+  const newEnd = new Date(newStart)
+  newEnd.setUTCFullYear(newEnd.getUTCFullYear() + 1)
+
+  const newStartIso = newStart.toISOString().slice(0, 10)
+  const newEndIso = newEnd.toISOString().slice(0, 10)
+
+  // Look up the rent cap for the property's state, if any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const state = ((current as any).unit?.property?.state ?? null) as string | null
+  let rentCapNote = ''
+  if (state) {
+    const { data: stateRules } = await supabase
+      .from('state_rent_rules')
+      .select('max_annual_increase_percent, max_annual_increase_formula')
+      .eq('state', state)
+      .maybeSingle()
+    if (stateRules?.max_annual_increase_percent !== null && stateRules?.max_annual_increase_percent !== undefined) {
+      rentCapNote = `[State rent cap for ${state}] Max annual increase: ${stateRules.max_annual_increase_formula ?? stateRules.max_annual_increase_percent + '%'}. Verify with your attorney.`
+    }
+  }
+
+  const { data: draft, error } = await supabase
+    .from('leases')
+    .insert({
+      owner_id: user.id,
+      unit_id: current.unit_id,
+      tenant_id: current.tenant_id,
+      status: 'draft',
+      start_date: newStartIso,
+      end_date: newEndIso,
+      monthly_rent: current.monthly_rent,
+      security_deposit: current.security_deposit,
+      rent_due_day: current.rent_due_day,
+      late_fee_amount: current.late_fee_amount,
+      late_fee_grace_days: current.late_fee_grace_days,
+      notes: rentCapNote || null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !draft) {
+    return {
+      success: false,
+      message: `Failed to start renewal: ${error?.message ?? 'unknown error'}`,
+    }
+  }
+
+  revalidatePath('/dashboard/renewals')
+  revalidatePath(`/dashboard/tenants/${current.tenant_id}`)
+  redirect(`/dashboard/tenants/${current.tenant_id}/leases/${draft.id}/edit`)
+}

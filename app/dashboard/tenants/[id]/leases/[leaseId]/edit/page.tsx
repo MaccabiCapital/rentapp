@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getLeaseWithRelations } from '@/app/lib/queries/leases'
+import { getStateRule } from '@/app/lib/queries/state-rules'
 import { updateLease } from '@/app/actions/leases'
 import { LeaseForm } from '@/app/ui/lease-form'
+import { RentCapWarning } from '@/app/ui/rent-cap-warning'
 
 export default async function EditLeasePage({
   params,
@@ -12,6 +14,11 @@ export default async function EditLeasePage({
   const { id, leaseId } = await params
   const lease = await getLeaseWithRelations(leaseId)
   if (!lease || lease.tenant.id !== id) notFound()
+
+  // Fetch state rule for the property's state so we can show
+  // a rent cap warning above the form when applicable.
+  const propertyState = lease.unit.property.state
+  const stateRule = propertyState ? await getStateRule(propertyState) : null
 
   const updateWithId = updateLease.bind(null, leaseId)
   const tenantName = `${lease.tenant.first_name} ${lease.tenant.last_name}`
@@ -44,6 +51,15 @@ export default async function EditLeasePage({
           Edit lease
         </h1>
       </div>
+      {stateRule && stateRule.has_statewide_cap && (
+        <div className="mx-auto mb-4 max-w-2xl">
+          <RentCapWarning
+            rule={stateRule}
+            currentRent={Number(lease.monthly_rent)}
+            state={propertyState}
+          />
+        </div>
+      )}
       <LeaseForm
         action={updateWithId}
         defaultValues={lease}

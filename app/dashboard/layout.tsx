@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
   { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
   { href: '/dashboard/team', label: 'My Team', icon: '◈' },
+  { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
 ] as const
 
 export default async function DashboardLayout({

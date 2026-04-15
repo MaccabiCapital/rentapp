@@ -195,6 +195,7 @@ create table public.leases (
   late_fee_grace_days int default 5,
   document_url text,                      -- signed lease PDF in storage
   signed_at timestamptz,
+  tenant_notice_given_on date,            -- when tenant said they're leaving
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -206,6 +207,7 @@ create index leases_unit_idx on public.leases (unit_id) where deleted_at is null
 create index leases_tenant_idx on public.leases (tenant_id) where deleted_at is null;
 create index leases_status_idx on public.leases (status) where deleted_at is null;
 create index leases_end_date_idx on public.leases (end_date) where deleted_at is null;
+create index leases_notice_idx on public.leases (tenant_notice_given_on) where deleted_at is null and tenant_notice_given_on is not null;
 
 -- ------------------------------------------------------------
 -- payments — rent payment records
@@ -366,6 +368,58 @@ create index team_members_role_idx on public.team_members (role) where deleted_a
 create index team_members_active_idx on public.team_members (owner_id, is_active) where deleted_at is null;
 
 -- ------------------------------------------------------------
+-- state_rent_rules + changelog — compliance knowledge base (Sprint 9.A)
+-- ------------------------------------------------------------
+-- System-managed reference data: one row per US state with
+-- rent caps, notice requirements, deposit rules, etc. Not
+-- per-user. RLS allows every authenticated user to read but
+-- writes come from migrations/admin scripts only.
+
+create table public.state_rent_rules (
+  id uuid primary key default gen_random_uuid(),
+  state text not null unique,
+  state_name text not null,
+  max_annual_increase_percent numeric(5,2),
+  max_annual_increase_formula text,
+  has_statewide_cap boolean not null default false,
+  increase_notice_days int,
+  no_cause_termination_notice_days int,
+  tenant_notice_days int,
+  security_deposit_max_months numeric(3,1),
+  security_deposit_return_days int,
+  late_fee_max_percent numeric(5,2),
+  late_fee_grace_days_min int,
+  eviction_cure_period_days int,
+  has_city_rent_control boolean not null default false,
+  city_rent_control_note text,
+  source_url text,
+  source_title text,
+  effective_date date,
+  last_verified_on date,
+  verified_by text,
+  is_researched boolean not null default false,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index state_rent_rules_state_idx on public.state_rent_rules (state);
+
+create table public.state_rent_rules_changelog (
+  id uuid primary key default gen_random_uuid(),
+  state_rule_id uuid not null references public.state_rent_rules(id) on delete cascade,
+  changed_at timestamptz not null default now(),
+  changed_by text not null,
+  change_type text not null,
+  field_changes jsonb,
+  source_url text,
+  notes text
+);
+
+create index state_rent_rules_changelog_state_idx on public.state_rent_rules_changelog (state_rule_id);
+create index state_rent_rules_changelog_time_idx on public.state_rent_rules_changelog (changed_at desc);
+
+-- ------------------------------------------------------------
 -- Row Level Security policies
 -- ------------------------------------------------------------
 -- Every table has the same policy: a row is only visible/mutable
@@ -381,6 +435,15 @@ alter table public.maintenance_requests enable row level security;
 alter table public.prospects enable row level security;
 alter table public.expenses enable row level security;
 alter table public.team_members enable row level security;
+alter table public.state_rent_rules enable row level security;
+alter table public.state_rent_rules_changelog enable row level security;
+
+-- Reference data: any authenticated user can read; no app-side
+-- write policies because writes come from migrations only.
+create policy "authenticated can select state rules"
+  on public.state_rent_rules for select to authenticated using (true);
+create policy "authenticated can select changelog"
+  on public.state_rent_rules_changelog for select to authenticated using (true);
 
 -- Properties
 create policy "owner can select own properties"
@@ -504,4 +567,6 @@ create trigger set_updated_at before update on public.prospects
 create trigger set_updated_at before update on public.expenses
   for each row execute procedure public.set_updated_at();
 create trigger set_updated_at before update on public.team_members
+  for each row execute procedure public.set_updated_at();
+create trigger set_updated_at before update on public.state_rent_rules
   for each row execute procedure public.set_updated_at();
