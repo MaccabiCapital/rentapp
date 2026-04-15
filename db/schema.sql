@@ -123,6 +123,7 @@ create table public.properties (
   property_type text,                     -- 'single_family', 'duplex', 'triplex', 'apartment_building', etc.
   year_built int,
   notes text,
+  photos text[] default '{}',              -- Sprint 10 hero/gallery photos
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

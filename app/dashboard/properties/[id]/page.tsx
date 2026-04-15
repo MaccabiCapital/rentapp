@@ -9,6 +9,8 @@ import { getUnitsForProperty } from '@/app/lib/queries/units'
 import { PropertyUnitsEmptyState } from '@/app/ui/property-units-empty-state'
 import { UnitStatusBadge } from '@/app/ui/unit-status-badge'
 import { DeletePropertyButton } from '@/app/ui/delete-property-button'
+import { PhotoGallery } from '@/app/ui/photo-gallery'
+import { PhotoUploader } from '@/app/ui/photo-uploader'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -76,6 +78,26 @@ export default async function PropertyDetailPage({
         <DetailRow label="Country" value={property.country} />
         <DetailRow label="Notes" value={property.notes} />
       </dl>
+
+      <div className="mt-10 mb-4">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Photos ({property.photos?.length ?? 0})
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Exterior and neighborhood shots for listings and record keeping.
+        </p>
+      </div>
+      <div className="mb-6">
+        <PhotoGallery
+          entityType="properties"
+          entityId={property.id}
+          photos={property.photos ?? []}
+          emptyMessage="No photos yet. Add an exterior shot so this property has a face."
+        />
+      </div>
+      <div className="mb-10">
+        <PhotoUploader entityType="properties" entityId={property.id} />
+      </div>
 
       <div className="mt-10 mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-zinc-900">

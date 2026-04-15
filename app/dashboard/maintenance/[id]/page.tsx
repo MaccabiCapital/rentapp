@@ -9,6 +9,8 @@ import { MaintenanceStatusBadge } from '@/app/ui/maintenance-status-badge'
 import { UrgencyBadge } from '@/app/ui/urgency-badge'
 import { MaintenanceStatusButtons } from '@/app/ui/maintenance-status-buttons'
 import { DeleteMaintenanceButton } from '@/app/ui/delete-maintenance-button'
+import { PhotoGallery } from '@/app/ui/photo-gallery'
+import { PhotoUploader } from '@/app/ui/photo-uploader'
 
 function formatCurrency(value: number | null): string {
   if (value === null) return '—'
@@ -130,6 +132,26 @@ export default async function MaintenanceDetailPage({
         />
         <DetailRow label="Notes" value={request.notes} />
       </dl>
+
+      <div className="mt-10 mb-4">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Photos ({request.photos.length})
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Attach photos of the damage or completed work.
+        </p>
+      </div>
+      <div className="mb-6">
+        <PhotoGallery
+          entityType="maintenance"
+          entityId={request.id}
+          photos={request.photos}
+          emptyMessage="No photos yet. Upload damage photos so you can decide urgency without driving there."
+        />
+      </div>
+      <div>
+        <PhotoUploader entityType="maintenance" entityId={request.id} />
+      </div>
 
       <div className="mt-6 flex justify-end">
         <DeleteMaintenanceButton requestId={request.id} title={request.title} />

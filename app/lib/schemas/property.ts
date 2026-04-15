@@ -74,6 +74,7 @@ export type Property = {
   property_type: string | null
   year_built: number | null
   notes: string | null
+  photos: string[]
   created_at: string
   updated_at: string
   deleted_at: string | null

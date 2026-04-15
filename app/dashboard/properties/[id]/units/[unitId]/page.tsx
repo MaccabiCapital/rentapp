@@ -13,6 +13,8 @@ import { LeaseStatusBadge } from '@/app/ui/lease-status-badge'
 import { MaintenanceStatusBadge } from '@/app/ui/maintenance-status-badge'
 import { UrgencyBadge } from '@/app/ui/urgency-badge'
 import { DeleteUnitButton } from '@/app/ui/delete-unit-button'
+import { PhotoGallery } from '@/app/ui/photo-gallery'
+import { PhotoUploader } from '@/app/ui/photo-uploader'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -117,6 +119,26 @@ export default async function UnitDetailPage({
           value={unit.square_feet?.toString() ?? null}
         />
       </dl>
+
+      <div className="mt-10 mb-4">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Photos ({unit.photos.length})
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Marketing photos for vacancy listings and tenant reference.
+        </p>
+      </div>
+      <div className="mb-6">
+        <PhotoGallery
+          entityType="units"
+          entityId={unit.id}
+          photos={unit.photos}
+          emptyMessage="No photos yet. Upload some so prospects can see the space."
+        />
+      </div>
+      <div className="mb-10">
+        <PhotoUploader entityType="units" entityId={unit.id} />
+      </div>
 
       <div className="mt-10 mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-zinc-900">Lease</h2>

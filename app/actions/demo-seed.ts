@@ -65,6 +65,10 @@ export async function seedDemoData(): Promise<ActionState> {
         property_type: 'Duplex',
         year_built: 1928,
         notes: `${DEMO_TAG} Two-unit duplex near Davis Square, purchased 2021.`,
+        photos: [
+          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80',
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80',
+        ],
       },
       {
         owner_id: user.id,
@@ -77,6 +81,10 @@ export async function seedDemoData(): Promise<ActionState> {
         property_type: 'Single-family',
         year_built: 1952,
         notes: `${DEMO_TAG} 3-bed single family home, currently vacant.`,
+        photos: [
+          'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80',
+          'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1600&q=80',
+        ],
       },
     ])
     .select('id, name')
@@ -105,6 +113,10 @@ export async function seedDemoData(): Promise<ActionState> {
         monthly_rent: 2400,
         security_deposit: 2400,
         status: 'occupied',
+        photos: [
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80',
+          'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1600&q=80',
+        ],
       },
       {
         owner_id: user.id,
@@ -116,6 +128,10 @@ export async function seedDemoData(): Promise<ActionState> {
         monthly_rent: 2850,
         security_deposit: 2850,
         status: 'occupied',
+        photos: [
+          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1600&q=80',
+          'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80',
+        ],
       },
       {
         owner_id: user.id,
@@ -127,6 +143,11 @@ export async function seedDemoData(): Promise<ActionState> {
         monthly_rent: 3600,
         security_deposit: 3600,
         status: 'vacant',
+        photos: [
+          'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1600&q=80',
+          'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=1600&q=80',
+          'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80',
+        ],
       },
     ])
     .select('id, property_id, unit_number')
@@ -246,6 +267,9 @@ export async function seedDemoData(): Promise<ActionState> {
       status: 'open',
       assigned_to: 'Joe the Plumber',
       notes: `${DEMO_TAG} Reported by tenant via text.`,
+      photos: [
+        'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1600&q=80',
+      ],
     },
     {
       owner_id: user.id,
@@ -257,6 +281,9 @@ export async function seedDemoData(): Promise<ActionState> {
       status: 'in_progress',
       assigned_to: 'Self',
       notes: `${DEMO_TAG} Waiting on replacement hardware from Ace.`,
+      photos: [
+        'https://images.unsplash.com/photo-1558002038-1055907df827?w=1600&q=80',
+      ],
     },
     {
       owner_id: user.id,
