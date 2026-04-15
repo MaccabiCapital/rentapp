@@ -3,9 +3,14 @@
 // ============================================================
 //
 // Landlord's primary at-a-glance view. One row per unit across
-// every property they own.
+// every property they own. Three possible states:
+//
+//   1. No properties at all   → empty-state CTA to add the first
+//   2. Properties but no units → property cards with "Add unit" CTAs
+//   3. Has units               → full rent roll table
 
 import Link from 'next/link'
+import { getProperties } from '@/app/lib/queries/properties'
 import { getAllUnitsWithProperty } from '@/app/lib/queries/units'
 import { RentRollEmptyState } from '@/app/ui/rent-roll-empty-state'
 import { RentRollStats } from '@/app/ui/rent-roll-stats'
@@ -26,7 +31,10 @@ function formatBedBath(bedrooms: number | null, bathrooms: number | null) {
 }
 
 export default async function PropertiesPage() {
-  const units = await getAllUnitsWithProperty()
+  const [properties, units] = await Promise.all([
+    getProperties(),
+    getAllUnitsWithProperty(),
+  ])
 
   return (
     <div>
@@ -40,8 +48,10 @@ export default async function PropertiesPage() {
         </Link>
       </div>
 
-      {units.length === 0 ? (
+      {properties.length === 0 ? (
         <RentRollEmptyState />
+      ) : units.length === 0 ? (
+        <PropertiesWithoutUnits properties={properties} />
       ) : (
         <>
           <RentRollStats units={units} />
@@ -99,6 +109,67 @@ export default async function PropertiesPage() {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+function PropertiesWithoutUnits({
+  properties,
+}: {
+  properties: Awaited<ReturnType<typeof getProperties>>
+}) {
+  return (
+    <div>
+      <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <span className="font-medium">
+          You have {properties.length}{' '}
+          {properties.length === 1 ? 'property' : 'properties'} with no units
+          yet.
+        </span>{' '}
+        Add units to each property to start tracking rent and occupancy.
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {properties.map((p) => (
+          <div
+            key={p.id}
+            className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <Link
+                  href={`/dashboard/properties/${p.id}`}
+                  className="text-base font-semibold text-indigo-600 hover:text-indigo-700"
+                >
+                  {p.name}
+                </Link>
+                <p className="mt-1 text-sm text-zinc-600">
+                  {p.street_address}, {p.city}, {p.state} {p.postal_code}
+                </p>
+                {p.property_type && (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {p.property_type}
+                    {p.year_built ? ` · built ${p.year_built}` : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Link
+                href={`/dashboard/properties/${p.id}/units/new`}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              >
+                Add unit
+              </Link>
+              <Link
+                href={`/dashboard/properties/${p.id}`}
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                View property
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

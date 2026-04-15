@@ -88,6 +88,10 @@ export async function seedDemoData(): Promise<ActionState> {
   // ------------------------------------------------------------
   // Units
   // ------------------------------------------------------------
+  //
+  // If any downstream insert fails, roll back the properties we
+  // just created so the user isn't stuck with orphan rows. This
+  // pattern repeats for each subsequent section.
   const { data: unitRows, error: uErr } = await supabase
     .from('units')
     .insert([
@@ -116,7 +120,7 @@ export async function seedDemoData(): Promise<ActionState> {
       {
         owner_id: user.id,
         property_id: house.id,
-        unit_number: null,
+        unit_number: 'Main',
         bedrooms: 3,
         bathrooms: 2.0,
         square_feet: 1650,
@@ -127,7 +131,15 @@ export async function seedDemoData(): Promise<ActionState> {
     ])
     .select('id, property_id, unit_number')
   if (uErr || !unitRows || unitRows.length !== 3) {
-    return { success: false, message: 'Failed to seed units.' }
+    // Roll back the 2 properties we just created
+    await supabase
+      .from('properties')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', [duplex.id, house.id])
+    return {
+      success: false,
+      message: `Failed to seed units: ${uErr?.message ?? 'unknown error'}. Properties rolled back.`,
+    }
   }
   const duplexUnit1 = unitRows.find(
     (u) => u.property_id === duplex.id && u.unit_number === '1',
