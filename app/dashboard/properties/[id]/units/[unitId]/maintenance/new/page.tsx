@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getProperty } from '@/app/lib/queries/properties'
 import { getUnit } from '@/app/lib/queries/units'
 import { getActiveLeaseForUnit } from '@/app/lib/queries/leases'
+import { getTeamMembersForPicker } from '@/app/lib/queries/team'
 import { createMaintenanceRequest } from '@/app/actions/maintenance'
 import { MaintenanceForm } from '@/app/ui/maintenance-form'
 
@@ -12,10 +13,22 @@ export default async function NewMaintenancePage({
   params: Promise<{ id: string; unitId: string }>
 }) {
   const { id, unitId } = await params
-  const [property, unit, activeLease] = await Promise.all([
+  const [property, unit, activeLease, teamOptions] = await Promise.all([
     getProperty(id),
     getUnit(unitId, id),
     getActiveLeaseForUnit(unitId),
+    getTeamMembersForPicker([
+      'maintenance',
+      'plumber',
+      'electrician',
+      'hvac',
+      'locksmith',
+      'landscaper',
+      'cleaning',
+      'contractor',
+      'inspector',
+      'other',
+    ]),
   ])
   if (!property || !unit) notFound()
 
@@ -69,6 +82,7 @@ export default async function NewMaintenancePage({
         mode="create"
         tenantOptions={tenantOptions}
         defaultTenantId={activeLease?.tenant.id ?? null}
+        teamOptions={teamOptions}
         submitLabel="Create request"
       />
     </div>

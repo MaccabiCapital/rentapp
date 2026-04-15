@@ -20,6 +20,13 @@ import {
   type MaintenanceStatus,
 } from '@/app/lib/schemas/maintenance'
 import type { ActionState } from '@/app/lib/types'
+import { touchTeamMemberUsage } from '@/app/actions/team'
+
+function readTeamMemberId(formData: FormData): string | null {
+  const v = formData.get('team_member_id')
+  if (typeof v !== 'string' || v.trim() === '') return null
+  return v.trim()
+}
 
 function parseCreateForm(formData: FormData) {
   return {
@@ -160,8 +167,21 @@ export async function updateMaintenanceRequest(
     }
   }
 
+  // If this update resolves a job AND a team member was linked,
+  // bump their usage counters. This is fire-and-forget — we don't
+  // fail the whole action if the counter update errors.
+  if (becomingResolved) {
+    const teamMemberId = readTeamMemberId(formData)
+    const totalCost =
+      (parsed.data.cost_materials ?? 0) + (parsed.data.cost_labor ?? 0)
+    if (teamMemberId && totalCost > 0) {
+      await touchTeamMemberUsage(teamMemberId, totalCost)
+    }
+  }
+
   revalidatePath('/dashboard/maintenance')
   revalidatePath(`/dashboard/maintenance/${id}`)
+  revalidatePath(`/dashboard/team`)
   revalidatePath(
     `/dashboard/properties/${existing.unit_id}`,
   )

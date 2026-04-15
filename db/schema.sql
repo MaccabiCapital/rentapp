@@ -82,6 +82,32 @@ create type expense_category as enum (
   'other'
 );
 
+create type team_role as enum (
+  'accountant',
+  'maintenance',
+  'locksmith',
+  'plumber',
+  'electrician',
+  'hvac',
+  'landscaper',
+  'cleaning',
+  'lawyer',
+  'paralegal',
+  'insurance_agent',
+  'real_estate_agent',
+  'inspector',
+  'contractor',
+  'sheriff_office',
+  'property_manager',
+  'other'
+);
+
+create type preferred_contact_method as enum (
+  'email',
+  'phone',
+  'text'
+);
+
 -- ------------------------------------------------------------
 -- properties — top-level building/location record
 -- ------------------------------------------------------------
@@ -289,6 +315,57 @@ create index expenses_category_idx on public.expenses (category) where deleted_a
 create index expenses_incurred_on_idx on public.expenses (incurred_on) where deleted_at is null;
 
 -- ------------------------------------------------------------
+-- team_members — vendor/contractor directory (Sprint 8)
+-- ------------------------------------------------------------
+-- "My Team": accountant, plumber, lawyer, insurance agent, etc.
+-- Wired into maintenance and expenses via a typeahead picker so
+-- the landlord can fire off work orders and auto-link expenses
+-- to the right person. Cost rollups are denormalized into
+-- total_spend_ytd so list views don't need per-row joins.
+create table public.team_members (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+
+  full_name text,
+  company_name text,
+
+  role team_role not null,
+  is_primary boolean not null default false,
+  is_active boolean not null default true,
+
+  email text,
+  phone text,
+  alt_phone text,
+  preferred_contact preferred_contact_method not null default 'phone',
+
+  license_number text,
+  license_state text,
+
+  hourly_rate numeric(10,2),
+  rate_notes text,
+
+  specialty text,
+  available_24_7 boolean not null default false,
+
+  last_used_on date,
+  total_jobs_ytd int not null default 0,
+  total_spend_ytd numeric(12,2) not null default 0,
+
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+
+  constraint team_member_name_required check (
+    coalesce(nullif(trim(full_name), ''), nullif(trim(company_name), '')) is not null
+  )
+);
+
+create index team_members_owner_idx on public.team_members (owner_id) where deleted_at is null;
+create index team_members_role_idx on public.team_members (role) where deleted_at is null;
+create index team_members_active_idx on public.team_members (owner_id, is_active) where deleted_at is null;
+
+-- ------------------------------------------------------------
 -- Row Level Security policies
 -- ------------------------------------------------------------
 -- Every table has the same policy: a row is only visible/mutable
@@ -303,6 +380,7 @@ alter table public.payments enable row level security;
 alter table public.maintenance_requests enable row level security;
 alter table public.prospects enable row level security;
 alter table public.expenses enable row level security;
+alter table public.team_members enable row level security;
 
 -- Properties
 create policy "owner can select own properties"
@@ -384,6 +462,16 @@ create policy "owner can update own expenses"
 create policy "owner can delete own expenses"
   on public.expenses for delete using (owner_id = auth.uid());
 
+-- Team members
+create policy "owner can select own team"
+  on public.team_members for select using (owner_id = auth.uid());
+create policy "owner can insert own team"
+  on public.team_members for insert with check (owner_id = auth.uid());
+create policy "owner can update own team"
+  on public.team_members for update using (owner_id = auth.uid());
+create policy "owner can delete own team"
+  on public.team_members for delete using (owner_id = auth.uid());
+
 -- ------------------------------------------------------------
 -- Updated-at trigger
 -- ------------------------------------------------------------
@@ -414,4 +502,6 @@ create trigger set_updated_at before update on public.maintenance_requests
 create trigger set_updated_at before update on public.prospects
   for each row execute procedure public.set_updated_at();
 create trigger set_updated_at before update on public.expenses
+  for each row execute procedure public.set_updated_at();
+create trigger set_updated_at before update on public.team_members
   for each row execute procedure public.set_updated_at();

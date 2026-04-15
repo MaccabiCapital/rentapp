@@ -20,6 +20,8 @@ import {
   URGENCY_VALUES,
   type MaintenanceRequest,
 } from '@/app/lib/schemas/maintenance'
+import type { TeamPickerOption } from '@/app/lib/queries/team'
+import { TeamMemberPicker } from './team-member-picker'
 
 type TenantOption = {
   id: string
@@ -32,6 +34,7 @@ type MaintenanceFormProps = {
   defaultValues?: MaintenanceRequest
   tenantOptions?: TenantOption[]
   defaultTenantId?: string | null
+  teamOptions?: TeamPickerOption[]
   mode: 'create' | 'edit'
   submitLabel?: string
 }
@@ -41,6 +44,7 @@ export function MaintenanceForm({
   defaultValues,
   tenantOptions,
   defaultTenantId,
+  teamOptions = [],
   mode,
   submitLabel = 'Save',
 }: MaintenanceFormProps) {
@@ -131,12 +135,18 @@ export function MaintenanceForm({
         </div>
       </div>
 
-      <Field
+      <TeamMemberPicker
+        options={teamOptions}
+        textFieldName="assigned_to"
+        idFieldName="team_member_id"
         label="Assigned to"
-        name="assigned_to"
-        placeholder="e.g. Bob the plumber, or Self"
+        placeholder="Pick from My Team or type a name"
         defaultValue={defaultValues?.assigned_to ?? ''}
-        errors={errors.assigned_to}
+        helpText={
+          teamOptions.length === 0
+            ? "Add people to My Team to pick them here. You can still type any name for now."
+            : 'Start typing — your team members auto-complete. Or type any name.'
+        }
       />
 
       {mode === 'create' && tenantOptions && tenantOptions.length > 0 && (

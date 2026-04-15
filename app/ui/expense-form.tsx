@@ -7,6 +7,8 @@ import {
   EXPENSE_CATEGORY_VALUES,
   type Expense,
 } from '@/app/lib/schemas/expense'
+import type { TeamPickerOption } from '@/app/lib/queries/team'
+import { TeamMemberPicker } from './team-member-picker'
 
 type PropertyOption = {
   id: string
@@ -18,6 +20,7 @@ type ExpenseFormProps = {
   defaultValues?: Expense
   defaultPropertyId?: string | null
   propertyOptions: PropertyOption[]
+  teamOptions?: TeamPickerOption[]
   submitLabel?: string
 }
 
@@ -26,6 +29,7 @@ export function ExpenseForm({
   defaultValues,
   defaultPropertyId,
   propertyOptions,
+  teamOptions = [],
   submitLabel = 'Save expense',
 }: ExpenseFormProps) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
@@ -156,39 +160,35 @@ export function ExpenseForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label
-            htmlFor="vendor"
-            className="block text-sm font-medium text-zinc-900"
-          >
-            Vendor
-          </label>
-          <input
-            id="vendor"
-            name="vendor"
-            type="text"
-            placeholder="e.g. State Farm, Home Depot"
-            defaultValue={defaultValues?.vendor ?? ''}
-            className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-zinc-900"
-          >
-            Description
-          </label>
-          <input
-            id="description"
-            name="description"
-            type="text"
-            placeholder="e.g. Q2 premium, faucet replacement"
-            defaultValue={defaultValues?.description ?? ''}
-            className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
+      <TeamMemberPicker
+        options={teamOptions}
+        textFieldName="vendor"
+        idFieldName="team_member_id"
+        label="Vendor"
+        placeholder="Pick from My Team or type a name"
+        defaultValue={defaultValues?.vendor ?? ''}
+        helpText={
+          teamOptions.length === 0
+            ? 'Add people to My Team to auto-link expenses to their profile.'
+            : 'Start typing — your team auto-completes. Linked expenses roll up into the team member profile.'
+        }
+      />
+
+      <div>
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-zinc-900"
+        >
+          Description
+        </label>
+        <input
+          id="description"
+          name="description"
+          type="text"
+          placeholder="e.g. Q2 premium, faucet replacement"
+          defaultValue={defaultValues?.description ?? ''}
+          className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
       </div>
 
       <div>

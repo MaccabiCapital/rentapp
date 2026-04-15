@@ -480,12 +480,114 @@ export async function seedDemoData(): Promise<ActionState> {
     return { success: false, message: 'Failed to seed rent payments.' }
   }
 
+  // ------------------------------------------------------------
+  // Team members (My Team — accountant, plumber, lawyer, etc.)
+  // ------------------------------------------------------------
+  const { error: teamErr } = await supabase.from('team_members').insert([
+    {
+      owner_id: user.id,
+      full_name: 'Linda Chen',
+      company_name: 'Chen & Associates CPA',
+      role: 'accountant',
+      is_primary: true,
+      is_active: true,
+      email: 'linda@chencpa.example.com',
+      phone: '617-555-0301',
+      preferred_contact: 'email',
+      hourly_rate: 275,
+      specialty: 'Rental property tax strategy, Schedule E specialist',
+      notes: `${DEMO_TAG} Files my returns every March, knows the duplex inside and out.`,
+    },
+    {
+      owner_id: user.id,
+      full_name: 'Joe Martinez',
+      company_name: "Joe's Plumbing",
+      role: 'plumber',
+      is_primary: true,
+      is_active: true,
+      email: 'joe@joesplumbing.example.com',
+      phone: '617-555-0312',
+      alt_phone: '617-555-0313',
+      preferred_contact: 'phone',
+      hourly_rate: 165,
+      rate_notes: '$150 minimum charge, $165/hr after',
+      specialty: 'Emergency 24/7, Somerville + Cambridge coverage',
+      available_24_7: true,
+      notes: `${DEMO_TAG} Has saved me twice at 2am. Always pick up the phone.`,
+    },
+    {
+      owner_id: user.id,
+      full_name: 'Maria Sanchez',
+      company_name: null,
+      role: 'electrician',
+      is_primary: true,
+      is_active: true,
+      phone: '617-555-0324',
+      preferred_contact: 'text',
+      hourly_rate: 145,
+      license_number: 'MA-ELEC-48291',
+      license_state: 'MA',
+      specialty: 'Old-house rewiring, panel upgrades, knob-and-tube replacement',
+      notes: `${DEMO_TAG} Licensed master electrician, reliable and fast.`,
+    },
+    {
+      owner_id: user.id,
+      full_name: 'Robert Kessler',
+      company_name: 'Kessler Law Group',
+      role: 'lawyer',
+      is_primary: true,
+      is_active: true,
+      email: 'bob@kesslerlaw.example.com',
+      phone: '617-555-0335',
+      preferred_contact: 'email',
+      license_number: 'MA-BAR-62814',
+      license_state: 'MA',
+      hourly_rate: 425,
+      specialty: 'MA landlord-tenant law, eviction specialist, lease review',
+      notes: `${DEMO_TAG} Retainer $2500/yr, handles evictions start to finish.`,
+    },
+    {
+      owner_id: user.id,
+      full_name: 'Karen Wu',
+      company_name: 'State Farm — Wu Agency',
+      role: 'insurance_agent',
+      is_primary: true,
+      is_active: true,
+      email: 'karen.wu@statefarm.example.com',
+      phone: '617-555-0346',
+      preferred_contact: 'email',
+      specialty: 'Landlord policies, umbrella coverage, loss of rent riders',
+      notes: `${DEMO_TAG} Bundled my 2 properties, saved ~$600/yr vs previous agent.`,
+    },
+    {
+      owner_id: user.id,
+      full_name: 'Tony Bianchi',
+      company_name: '24hr Boston Locksmith',
+      role: 'locksmith',
+      is_primary: true,
+      is_active: true,
+      phone: '617-555-0357',
+      preferred_contact: 'phone',
+      hourly_rate: 125,
+      specialty: 'Lockouts, rekey on turnover, smart lock installs',
+      available_24_7: true,
+      notes: `${DEMO_TAG} Called him twice for tenant lockouts. Fast and fair priced.`,
+    },
+  ])
+  if (teamErr) {
+    return {
+      success: false,
+      message: `Failed to seed team members: ${teamErr.message}`,
+    }
+  }
+
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/properties')
   revalidatePath('/dashboard/tenants')
   revalidatePath('/dashboard/maintenance')
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
+  revalidatePath('/dashboard/team')
   redirect('/dashboard/properties')
 }
 
@@ -517,6 +619,10 @@ export async function unseedDemoData(): Promise<ActionState> {
     .ilike('notes', tagFilter)
   await supabase.from('expenses').delete().ilike('notes', tagFilter)
   await supabase
+    .from('team_members')
+    .update({ deleted_at: new Date().toISOString() })
+    .ilike('notes', tagFilter)
+  await supabase
     .from('units')
     .update({ deleted_at: new Date().toISOString() })
     .in(
@@ -539,5 +645,6 @@ export async function unseedDemoData(): Promise<ActionState> {
   revalidatePath('/dashboard/maintenance')
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
+  revalidatePath('/dashboard/team')
   redirect('/dashboard')
 }

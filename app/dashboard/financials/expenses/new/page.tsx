@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getProperties } from '@/app/lib/queries/properties'
+import { getTeamMembersForPicker } from '@/app/lib/queries/team'
 import { createExpense } from '@/app/actions/expenses'
 import { ExpenseForm } from '@/app/ui/expense-form'
 
@@ -9,7 +10,11 @@ export default async function NewExpensePage({
   searchParams: Promise<{ property?: string }>
 }) {
   const { property: preselectedProperty } = await searchParams
-  const properties = await getProperties()
+  const [properties, teamOptions] = await Promise.all([
+    getProperties(),
+    // Everyone in your team — expenses can go to any vendor type
+    getTeamMembersForPicker(),
+  ])
   const propertyOptions = properties.map((p) => ({ id: p.id, name: p.name }))
 
   return (
@@ -33,6 +38,7 @@ export default async function NewExpensePage({
         action={createExpense}
         propertyOptions={propertyOptions}
         defaultPropertyId={preselectedProperty ?? null}
+        teamOptions={teamOptions}
       />
     </div>
   )

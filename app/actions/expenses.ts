@@ -13,6 +13,13 @@ import {
   ManualIncomeSchema,
 } from '@/app/lib/schemas/expense'
 import type { ActionState } from '@/app/lib/types'
+import { touchTeamMemberUsage } from '@/app/actions/team'
+
+function readTeamMemberId(formData: FormData): string | null {
+  const v = formData.get('team_member_id')
+  if (typeof v !== 'string' || v.trim() === '') return null
+  return v.trim()
+}
 
 function parseExpenseForm(formData: FormData) {
   return {
@@ -56,6 +63,14 @@ export async function createExpense(
 
   if (error) {
     return { success: false, message: 'Failed to log expense. Please try again.' }
+  }
+
+  // Auto-link to team member if one was selected
+  const teamMemberId = readTeamMemberId(formData)
+  if (teamMemberId) {
+    await touchTeamMemberUsage(teamMemberId, parsed.data.amount)
+    revalidatePath(`/dashboard/team/${teamMemberId}`)
+    revalidatePath('/dashboard/team')
   }
 
   revalidatePath('/dashboard/financials')

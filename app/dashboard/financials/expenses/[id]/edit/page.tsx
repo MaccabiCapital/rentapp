@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getExpense } from '@/app/lib/queries/financials'
 import { getProperties } from '@/app/lib/queries/properties'
+import { getTeamMembersForPicker } from '@/app/lib/queries/team'
 import { updateExpense } from '@/app/actions/expenses'
 import { ExpenseForm } from '@/app/ui/expense-form'
 
@@ -11,9 +12,10 @@ export default async function EditExpensePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [expense, properties] = await Promise.all([
+  const [expense, properties, teamOptions] = await Promise.all([
     getExpense(id),
     getProperties(),
+    getTeamMembersForPicker(),
   ])
   if (!expense) notFound()
 
@@ -37,6 +39,7 @@ export default async function EditExpensePage({
         action={updateWithId}
         defaultValues={expense}
         propertyOptions={propertyOptions}
+        teamOptions={teamOptions}
         submitLabel="Save changes"
       />
     </div>
