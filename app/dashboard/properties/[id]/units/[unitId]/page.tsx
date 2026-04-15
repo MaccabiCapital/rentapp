@@ -7,8 +7,11 @@ import { notFound } from 'next/navigation'
 import { getProperty } from '@/app/lib/queries/properties'
 import { getUnit } from '@/app/lib/queries/units'
 import { getActiveLeaseForUnit } from '@/app/lib/queries/leases'
+import { getMaintenanceForUnit } from '@/app/lib/queries/maintenance'
 import { UnitStatusBadge } from '@/app/ui/unit-status-badge'
 import { LeaseStatusBadge } from '@/app/ui/lease-status-badge'
+import { MaintenanceStatusBadge } from '@/app/ui/maintenance-status-badge'
+import { UrgencyBadge } from '@/app/ui/urgency-badge'
 import { DeleteUnitButton } from '@/app/ui/delete-unit-button'
 
 function formatCurrency(value: number | null) {
@@ -35,10 +38,11 @@ export default async function UnitDetailPage({
   params: Promise<{ id: string; unitId: string }>
 }) {
   const { id, unitId } = await params
-  const [property, unit, activeLease] = await Promise.all([
+  const [property, unit, activeLease, maintenance] = await Promise.all([
     getProperty(id),
     getUnit(unitId, id),
     getActiveLeaseForUnit(unitId),
+    getMaintenanceForUnit(unitId),
   ])
   if (!property || !unit) notFound()
 
@@ -160,6 +164,74 @@ export default async function UnitDetailPage({
           <p className="mt-1 text-sm text-zinc-600">
             Start a lease to link a tenant and begin tracking rent.
           </p>
+        </div>
+      )}
+
+      <div className="mt-10 mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Maintenance ({maintenance.length})
+        </h2>
+        <Link
+          href={`/dashboard/properties/${property.id}/units/${unit.id}/maintenance/new`}
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        >
+          Report issue
+        </Link>
+      </div>
+
+      {maintenance.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50/50 p-10 text-center">
+          <h3 className="text-base font-semibold text-zinc-900">
+            No maintenance requests
+          </h3>
+          <p className="mt-1 text-sm text-zinc-600">
+            Log a leak, broken appliance, or any other issue so it stays
+            tracked with cost history.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+          <table className="min-w-full divide-y divide-zinc-200">
+            <thead className="bg-zinc-50">
+              <tr>
+                <th scope="col" className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                  Title
+                </th>
+                <th scope="col" className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                  Urgency
+                </th>
+                <th scope="col" className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                  Reported
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 bg-white">
+              {maintenance.map((m) => (
+                <tr key={m.id} className="even:bg-zinc-50/40">
+                  <td className="px-4 py-3 text-sm text-zinc-900">
+                    <Link
+                      href={`/dashboard/maintenance/${m.id}`}
+                      className="font-medium text-indigo-600 hover:text-indigo-700"
+                    >
+                      {m.title}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <UrgencyBadge urgency={m.urgency} />
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <MaintenanceStatusBadge status={m.status} />
+                  </td>
+                  <td className="px-4 py-3 text-sm text-zinc-900">
+                    {formatDate(m.created_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
