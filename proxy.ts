@@ -20,6 +20,13 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // Public listings (Sprint 11) — no auth required. Visitors from
+  // Zillow / Craigslist / etc need to see these pages signed-out
+  // and submit the inquiry form. Skip all auth checks on this path.
+  if (pathname.startsWith('/listings')) {
+    return response
+  }
+
   // Redirect unauthenticated users away from protected routes.
   // This is an OPTIMISTIC check — layouts in /dashboard also
   // verify and redirect if needed.

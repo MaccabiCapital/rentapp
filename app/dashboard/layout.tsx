@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/rent', label: 'Rent', icon: '$' },
   { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
   { href: '/dashboard/prospects', label: 'Prospects', icon: '→' },
+  { href: '/dashboard/listings', label: 'Listings', icon: '◎' },
   { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
   { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
   { href: '/dashboard/team', label: 'My Team', icon: '◈' },

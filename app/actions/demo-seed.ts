@@ -608,6 +608,35 @@ export async function seedDemoData(): Promise<ActionState> {
     }
   }
 
+  // ------------------------------------------------------------
+  // Listings (public landing page for the vacant Cambridge house)
+  // ------------------------------------------------------------
+  const { error: listingErr } = await supabase.from('listings').insert({
+    owner_id: user.id,
+    property_id: house.id,
+    unit_id: houseUnit.id,
+    slug: `cambridge-single-family-${Date.now().toString(36)}`,
+    title: 'Sunny 3BR single-family home near Harvard Square',
+    description: `Beautifully maintained 3-bedroom, 2-bathroom single-family home on a quiet Cambridge street, 10-min walk to Harvard Square and the Red Line. Recently renovated kitchen with new appliances, hardwood floors throughout, finished basement with laundry, private backyard, off-street parking for 2 cars.
+
+Perfect for a family or professionals looking for a quiet, walkable neighborhood. No pets. 12-month lease minimum. First month + security deposit due at signing.
+
+Available ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} — schedule a showing below.`,
+    headline_rent: 3600,
+    available_on: daysAgo(-30), // 30 days from now
+    contact_email: user.email,
+    contact_phone: '617-555-0199',
+    is_active: true,
+    view_count: 0,
+    inquiry_count: 0,
+  })
+  if (listingErr) {
+    return {
+      success: false,
+      message: `Failed to seed listing: ${listingErr.message}`,
+    }
+  }
+
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/properties')
   revalidatePath('/dashboard/tenants')
@@ -615,6 +644,7 @@ export async function seedDemoData(): Promise<ActionState> {
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
   revalidatePath('/dashboard/team')
+  revalidatePath('/dashboard/listings')
   redirect('/dashboard/properties')
 }
 
@@ -649,18 +679,26 @@ export async function unseedDemoData(): Promise<ActionState> {
     .from('team_members')
     .update({ deleted_at: new Date().toISOString() })
     .ilike('notes', tagFilter)
-  await supabase
-    .from('units')
-    .update({ deleted_at: new Date().toISOString() })
-    .in(
-      'property_id',
-      (
-        await supabase
-          .from('properties')
-          .select('id')
-          .ilike('notes', tagFilter)
-      ).data?.map((r) => r.id) ?? [],
-    )
+  // Look up demo property IDs once — we use them to cascade-clean
+  // units and listings that live under demo properties.
+  const demoPropertyIds =
+    (
+      await supabase
+        .from('properties')
+        .select('id')
+        .ilike('notes', tagFilter)
+    ).data?.map((r) => r.id) ?? []
+
+  if (demoPropertyIds.length > 0) {
+    await supabase
+      .from('listings')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('property_id', demoPropertyIds)
+    await supabase
+      .from('units')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('property_id', demoPropertyIds)
+  }
   await supabase
     .from('properties')
     .update({ deleted_at: new Date().toISOString() })
