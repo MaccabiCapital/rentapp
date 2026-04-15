@@ -65,6 +65,23 @@ create type prospect_stage as enum (
   'withdrew'
 );
 
+create type expense_category as enum (
+  'advertising',
+  'cleaning_maintenance',
+  'commissions',
+  'insurance',
+  'legal_professional',
+  'management_fees',
+  'mortgage_interest',
+  'other_interest',
+  'repairs',
+  'supplies',
+  'taxes',
+  'utilities',
+  'depreciation',
+  'other'
+);
+
 -- ------------------------------------------------------------
 -- properties — top-level building/location record
 -- ------------------------------------------------------------
@@ -244,6 +261,34 @@ create index prospects_unit_idx on public.prospects (unit_id);
 create index prospects_stage_idx on public.prospects (stage);
 
 -- ------------------------------------------------------------
+-- expenses — non-maintenance expenses (Sprint 7)
+-- ------------------------------------------------------------
+-- Schedule E-aligned categories so the Financials sprint can do
+-- per-category rollups and CSV export for tax time. Ties to
+-- properties (not units) because most landlord expenses are at
+-- the property level. Per-unit allocation is deferred.
+create table public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  property_id uuid not null references public.properties(id) on delete cascade,
+  category expense_category not null,
+  amount numeric(12,2) not null check (amount > 0),
+  incurred_on date not null,
+  vendor text,
+  description text,
+  notes text,
+  receipt_url text,                         -- future: storage bucket
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index expenses_owner_idx on public.expenses (owner_id) where deleted_at is null;
+create index expenses_property_idx on public.expenses (property_id) where deleted_at is null;
+create index expenses_category_idx on public.expenses (category) where deleted_at is null;
+create index expenses_incurred_on_idx on public.expenses (incurred_on) where deleted_at is null;
+
+-- ------------------------------------------------------------
 -- Row Level Security policies
 -- ------------------------------------------------------------
 -- Every table has the same policy: a row is only visible/mutable
@@ -257,6 +302,7 @@ alter table public.leases enable row level security;
 alter table public.payments enable row level security;
 alter table public.maintenance_requests enable row level security;
 alter table public.prospects enable row level security;
+alter table public.expenses enable row level security;
 
 -- Properties
 create policy "owner can select own properties"
@@ -328,6 +374,16 @@ create policy "owner can update own prospects"
 create policy "owner can delete own prospects"
   on public.prospects for delete using (owner_id = auth.uid());
 
+-- Expenses
+create policy "owner can select own expenses"
+  on public.expenses for select using (owner_id = auth.uid());
+create policy "owner can insert own expenses"
+  on public.expenses for insert with check (owner_id = auth.uid());
+create policy "owner can update own expenses"
+  on public.expenses for update using (owner_id = auth.uid());
+create policy "owner can delete own expenses"
+  on public.expenses for delete using (owner_id = auth.uid());
+
 -- ------------------------------------------------------------
 -- Updated-at trigger
 -- ------------------------------------------------------------
@@ -356,4 +412,6 @@ create trigger set_updated_at before update on public.payments
 create trigger set_updated_at before update on public.maintenance_requests
   for each row execute procedure public.set_updated_at();
 create trigger set_updated_at before update on public.prospects
+  for each row execute procedure public.set_updated_at();
+create trigger set_updated_at before update on public.expenses
   for each row execute procedure public.set_updated_at();
