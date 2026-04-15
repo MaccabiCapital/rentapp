@@ -30,17 +30,22 @@ export async function proxy(request: NextRequest) {
     pathname === '/'
 
   if (isProtectedRoute && !user) {
-    const url = request.nextUrl.clone()
+    // Build a fresh URL so we don't leak query-string debris from
+    // the original request (which would cause a redirect loop when
+    // the sign-in page passes a "next=" that points back here).
+    const url = new URL(request.url)
     url.pathname = '/sign-in'
+    url.search = ''
     url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
   // Authenticated users who hit the sign-in / sign-up pages
-  // should bounce to the dashboard.
+  // should bounce to the dashboard. Fresh URL, no query debris.
   if (isAuthRoute && user && pathname !== '/') {
-    const url = request.nextUrl.clone()
+    const url = new URL(request.url)
     url.pathname = '/dashboard'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 
