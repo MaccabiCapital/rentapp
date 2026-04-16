@@ -55,18 +55,22 @@ on the webhook route.
 
 ---
 
-## 3. A2P 10DLC registration (THE BIG BLOCKER)
+## 3. A2P 10DLC registration (DEFERRED — scale concern only)
 
-US carriers require brand + campaign registration before
-commercial SMS flows reliably. Unregistered numbers work for a
-day or two, then messages start getting silently filtered.
+**Not a blocker for testing.** Twilio/Retell sandbox numbers work
+for low-volume dev traffic without registration. This only needs
+to happen when real landlords onboard and message volume climbs
+past the unregistered-sender thresholds (a few dozen messages/day
+across the whole number).
 
-### What's stubbed
-- `provisionSupportLine()` sets `status='pending'` and leaves the
-  brand/campaign IDs null. There is NO code path today that
-  actually submits brand info to the carrier.
+### Status
+- `provisionSupportLine()` sets `status='active'` on stub creation
+  and leaves `a2p_brand_id` / `a2p_campaign_id` null. That's fine
+  while testing.
+- When the first real landlord goes live with more than a handful
+  of tenants, revisit this section.
 
-### What's needed
+### What will be needed (when the time comes)
 - A multi-step form in SMS settings to collect: legal business
   name, EIN, address, website, sample messages, opt-in flow
   description. Submit via Twilio's BrandRegistration + Campaign
@@ -75,13 +79,12 @@ day or two, then messages start getting silently filtered.
   happens on a carrier callback that takes hours to weeks.
 - In-app messaging explaining the delay so landlords don't file
   support tickets thinking we're broken.
-- Until this is built, activation is manual (Arthur toggles the
-  row in Supabase).
 
-### Timeline expectation to set with users
+### Timeline when it does become real
 - Brand registration: hours to days.
 - Campaign vetting: days to weeks.
-- Do not promise "provision a number today and start texting."
+- Do NOT promise "provision a number today and start texting" to
+  real landlords with real tenant volumes.
 
 ---
 
@@ -219,16 +222,32 @@ hasn't been yet:
 
 ---
 
-## Activation checklist (before going live with a first landlord)
+## Activation checklist — testing phase
+
+Enough to test the full flow end-to-end with Arthur or a small
+pilot. A2P 10DLC is skipped here — sandbox volume is fine.
 
 - [ ] Retell account created; `RETELL_API_KEY` in env
+- [ ] Twilio credentials (account SID + auth token) available
 - [ ] Resend account + verified domain; `RESEND_API_KEY` in env
-- [ ] Twilio credentials flow tested end-to-end in dev
-- [ ] Brand + campaign registration submitted and approved
 - [ ] Real webhook payload captured; signature verification
-      confirmed working
-- [ ] Media allowlist updated with real CDN hostname
-- [ ] Landlord notification email template reviewed
+      confirmed working (fix `verify-signature.ts` header name +
+      digest format against live payload)
+- [ ] Retell payload schema confirmed against live
+      `chat_analyzed` event; fix `retell-payload.ts` if the
+      shape differs
+- [ ] Media CDN hostname added to `sms-media.ts` allowlist
 - [ ] Retell system prompt reviewed (sounds helpful, not robotic)
-- [ ] End-to-end smoke test: send a real SMS → verify it creates
-      a maintenance request → verify the landlord gets an email
+- [ ] Landlord notification email template reviewed
+- [ ] End-to-end smoke test: text the support line → verify it
+      creates a maintenance request → verify the landlord gets
+      an email
+
+## Activation checklist — scaling up (defer until ≥1 real landlord)
+
+These kick in when pilot usage climbs past sandbox limits. See §3.
+
+- [ ] A2P 10DLC brand registration submitted
+- [ ] A2P 10DLC campaign registration + carrier approval
+- [ ] Landlord-facing form for collecting brand info
+- [ ] Pending-status polling UI so landlords see progress

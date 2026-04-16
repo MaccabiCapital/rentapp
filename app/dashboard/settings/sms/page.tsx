@@ -45,13 +45,13 @@ export default async function SmsSettingsPage() {
         <p>
           <span className="font-medium">Heads up:</span> the Retell AI +
           Twilio integration is stubbed in this build. Provisioning here
-          writes a placeholder row with a fake number. Real numbers require
-          a Retell API key, a Twilio account, and A2P 10DLC carrier
-          registration (takes hours to weeks).
+          writes a placeholder row with a fake number. Real numbers need
+          a Retell API key and Twilio credentials — carrier registration
+          (A2P 10DLC) can wait until you&rsquo;re past testing.
         </p>
         <p className="mt-2">
           See <code className="rounded bg-amber-100 px-1 py-0.5">docs/SPRINT-13-NEEDS.md</code>{' '}
-          for the full activation checklist.
+          for the activation checklist.
         </p>
       </div>
 
