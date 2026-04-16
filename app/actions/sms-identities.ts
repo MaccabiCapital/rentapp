@@ -113,8 +113,12 @@ export async function assignTriageToTenant(
     }
   }
 
-  // Retarget the triage communication at the tenant. The RLS
-  // check will re-verify entity ownership on update.
+  // Retarget the triage communication at the tenant. Explicit
+  // owner_id filter is defense in depth — RLS on communications
+  // already checks auth.uid() = owner_id, but belt-and-braces
+  // means a relaxed policy in the future doesn't open a hole
+  // letting a landlord reassign another landlord's triage row.
+  // See review M-3.
   const { error: commErr } = await supabase
     .from('communications')
     .update({
@@ -123,6 +127,7 @@ export async function assignTriageToTenant(
       metadata: { reassigned_from: 'triage', reassigned_phone: e164 },
     })
     .eq('id', triageCommId)
+    .eq('owner_id', user.id)
   if (commErr) {
     return {
       success: false,

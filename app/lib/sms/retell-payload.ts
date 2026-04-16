@@ -37,9 +37,15 @@ export type RetellAnalysis = z.infer<typeof RetellAnalysisSchema>
 // A single message in the conversation transcript.
 export const RetellMessageSchema = z.object({
   role: z.enum(['user', 'agent']),
-  content: z.string(),
-  // Twilio media URLs when the tenant attached an MMS.
-  media_urls: z.array(z.string().url()).optional().default([]),
+  content: z.string().max(10_000),
+  // Twilio media URLs when the tenant attached an MMS. Capped so a
+  // malicious payload with thousands of URLs can't pin the download
+  // loop. See review M-4.
+  media_urls: z
+    .array(z.string().url())
+    .max(10)
+    .optional()
+    .default([]),
 })
 
 export type RetellMessage = z.infer<typeof RetellMessageSchema>

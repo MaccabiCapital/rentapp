@@ -16,6 +16,8 @@ import {
   generateWebhookSecret,
   provisionPhoneNumber,
 } from '@/app/lib/sms/retell-adapter'
+// rotateWebhookSecret below intentionally doesn't call
+// generateWebhookSecret yet — see review H-2 / the TODO in that function.
 import type { ActionState } from '@/app/lib/types'
 
 function getBaseUrl(): string {
@@ -93,9 +95,16 @@ export async function provisionSupportLine(): Promise<ActionState> {
 
 export async function suspendSupportLine(): Promise<ActionState> {
   const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
   const { error } = await supabase
     .from('landlord_phone_lines')
     .update({ status: 'suspended' })
+    .eq('owner_id', user.id) // defense in depth (review L-2)
     .eq('line_type', 'support')
   if (error) {
     return { success: false, message: `Could not suspend: ${error.message}` }
@@ -105,18 +114,21 @@ export async function suspendSupportLine(): Promise<ActionState> {
 }
 
 export async function rotateWebhookSecret(): Promise<ActionState> {
-  const supabase = await createServerClient()
-  const newSecret = generateWebhookSecret()
-  const { error } = await supabase
-    .from('landlord_phone_lines')
-    .update({ retell_webhook_secret: newSecret })
-    .eq('line_type', 'support')
-  if (error) {
-    return { success: false, message: `Could not rotate: ${error.message}` }
+  // DISABLED until the Retell update-agent API call is wired in.
+  // Rotating the secret in our DB without simultaneously telling
+  // Retell about the new secret silently breaks webhook
+  // verification for every inbound message after the rotation.
+  // See review H-2 and docs/SPRINT-13-NEEDS.md#1.
+  //
+  // When re-enabling:
+  //   1. Call retell.chatAgent.update({ agent_id, webhook_secret })
+  //      atomically with the DB write.
+  //   2. Roll back the DB change if Retell returns an error.
+  //   3. Remove this guard.
+  // TODO(sprint-13)
+  return {
+    success: false,
+    message:
+      'Secret rotation is disabled until the Retell update-agent API is wired in — see SPRINT-13-NEEDS.md.',
   }
-  // TODO(sprint-13): also push the new secret to Retell via their
-  // update-agent API so the signatures keep matching. Right now
-  // rotating here would silently break webhook verification.
-  revalidatePath('/dashboard/settings/sms')
-  return { success: true }
 }

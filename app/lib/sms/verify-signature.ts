@@ -34,6 +34,11 @@ export function verifyRetellSignature(
     ? signature.slice('sha256='.length)
     : signature
 
+  // SHA-256 hex is exactly 64 lowercase-or-uppercase hex chars.
+  // Explicit regex is cheaper than relying on Buffer.from's silent
+  // truncation of non-hex characters. See review M-2.
+  if (!/^[0-9a-f]{64}$/i.test(provided)) return false
+
   // TODO(sprint-13): confirm Retell's actual header format — see
   // SPRINT-13-NEEDS.md#5-retell-webhook-signature-verification
   const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')

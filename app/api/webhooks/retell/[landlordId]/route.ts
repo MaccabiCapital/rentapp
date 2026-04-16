@@ -42,11 +42,68 @@ const URGENCY_MAP: Record<string, string> = {
   low: 'low',
 }
 
+// UUID v4-ish matcher — not strict about version/variant bits so
+// anything Supabase accepts as a uuid passes. Used to reject
+// garbage path params before we burn a DB round-trip. See review C-2.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// ------------------------------------------------------------
+// Rate limiter (in-memory, per-process, per landlordId+IP)
+// ------------------------------------------------------------
+// Enough for sandbox / testing. Production should swap this for a
+// shared store (Upstash, @vercel/kv) so the limit survives across
+// serverless cold starts. See review H-3 and SPRINT-13-NEEDS.md.
+const RATE_LIMIT_WINDOW_MS = 60_000
+const RATE_LIMIT_MAX = 60 // per key per window
+const rateBuckets = new Map<string, { count: number; resetAt: number }>()
+
+function rateLimit(key: string): { ok: boolean; retryAfter: number } {
+  const now = Date.now()
+  const bucket = rateBuckets.get(key)
+  if (!bucket || bucket.resetAt < now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return { ok: true, retryAfter: 0 }
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) {
+    return { ok: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) }
+  }
+  bucket.count += 1
+  return { ok: true, retryAfter: 0 }
+}
+
+function getClientIp(request: Request): string {
+  const fwd = request.headers.get('x-forwarded-for')
+  if (fwd) return fwd.split(',')[0]!.trim()
+  const real = request.headers.get('x-real-ip')
+  if (real) return real.trim()
+  return 'unknown'
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ landlordId: string }> },
 ) {
   const { landlordId } = await context.params
+
+  // 0. Cheap guards first — no DB work until these pass.
+  // UUID shape check (review C-2).
+  if (!UUID_RE.test(landlordId)) {
+    return NextResponse.json({ error: 'unknown line' }, { status: 404 })
+  }
+
+  // Rate limit per (IP, landlordId) to cap abuse of the public
+  // endpoint before signature verification (review H-3).
+  const ip = getClientIp(request)
+  const rl = rateLimit(`${ip}:${landlordId}`)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': rl.retryAfter.toString() },
+      },
+    )
+  }
 
   // Raw body first — HMAC needs the exact bytes.
   const rawBody = await request.text()
@@ -64,10 +121,12 @@ export async function POST(
   }
 
   // 2. Verify signature.
+  // Only accept Retell's documented header names. Dropped the
+  // generic `x-signature` fallback that review M-1 flagged as
+  // too permissive against middleware-injected headers.
   const signatureHeader =
     request.headers.get('x-retell-signature') ??
-    request.headers.get('retell-signature') ??
-    request.headers.get('x-signature')
+    request.headers.get('retell-signature')
   const signatureOk = verifyRetellSignature(
     rawBody,
     signatureHeader,
@@ -128,12 +187,15 @@ export async function POST(
   } catch (err) {
     const msg = (err as Error).message
     console.error('[retell-webhook] handler error', msg)
+    // Persist the full error server-side for debugging, but never
+    // echo DB error messages back to the caller — they leak table
+    // and constraint names. See review H-4.
     await supabase
       .from('retell_webhook_events')
       .update({ process_error: msg })
       .eq('id', inserted.id)
     // Still 200 so Retell doesn't retry-storm a broken handler.
-    return NextResponse.json({ ok: true, error: msg })
+    return NextResponse.json({ ok: true, error: 'internal error' })
   }
 
   return NextResponse.json({ ok: true })

@@ -10,12 +10,17 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { now } from '@/app/lib/now'
+import { computeRentScheduleStatus } from '@/app/lib/rent-schedule-status'
 import type {
   RentSchedule,
   RentScheduleStatus,
   RentScheduleWithContext,
 } from '@/app/lib/schemas/rent-schedule'
 
+// Re-export with the original name so callers don't change. The
+// pure implementation lives in @/app/lib/rent-schedule-status so
+// it can be unit-tested without pulling Next's Supabase server
+// client into the test bundle.
 export function computeStatus(
   row: Pick<
     RentSchedule,
@@ -23,26 +28,7 @@ export function computeStatus(
   >,
   nowMs: number = now(),
 ): RentScheduleStatus {
-  // If the landlord explicitly marked it skipped, respect that.
-  if (row.status === 'skipped') return 'skipped'
-
-  const amt = Number(row.amount)
-  const paid = Number(row.paid_amount)
-  if (paid >= amt) return 'paid'
-
-  const dueMs = new Date(row.due_date).getTime()
-  if (paid > 0 && paid < amt) {
-    // Partial — if we're past the due date it's also overdue;
-    // we keep 'partial' as the dominant label in the UI and rely
-    // on the badge tone to convey urgency.
-    return 'partial'
-  }
-  if (dueMs < nowMs) return 'overdue'
-
-  // Within 3 days of due date and not paid → due. Outside → upcoming.
-  const threeDays = 3 * 24 * 60 * 60 * 1000
-  if (dueMs - nowMs <= threeDays) return 'due'
-  return 'upcoming'
+  return computeRentScheduleStatus(row, nowMs)
 }
 
 export async function getRentSchedulesInWindow(

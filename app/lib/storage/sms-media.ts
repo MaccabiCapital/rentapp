@@ -61,6 +61,22 @@ export async function downloadRemoteMedia(
       signal: controller.signal,
       redirect: 'manual', // don't follow off-list redirects
     })
+    // SECURITY: explicitly reject redirects so the allowlist stays
+    // authoritative. `redirect: 'manual'` yields opaqueredirect in
+    // most Node fetch impls, but we assert both type and status
+    // codes so a future runtime swap doesn't silently start
+    // following redirects to internal hosts. See review C-1.
+    if (
+      res.type === 'opaqueredirect' ||
+      res.status === 301 ||
+      res.status === 302 ||
+      res.status === 303 ||
+      res.status === 307 ||
+      res.status === 308
+    ) {
+      console.warn('[sms-media] rejected redirect', res.status, res.type)
+      return null
+    }
     if (!res.ok) return null
 
     const contentType =
