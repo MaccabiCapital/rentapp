@@ -15,6 +15,7 @@
 //   6. stale_compliance       — portfolio state with last_verified_on > 90d ago
 //   7. insurance_renewal      — policy expiring within 60d (Sprint 12 A)
 //   8. rent_overdue           — rent_schedule past due and not fully paid (Sprint 12 B)
+//   9. triage_inbox           — unresolved inbound SMS awaiting assignment (Sprint 13c)
 
 import { createServerClient } from '@/lib/supabase/server'
 import { now } from '@/app/lib/now'
@@ -371,6 +372,29 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
       subtitle: `${unitLabel} · ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past due`,
       href: '/dashboard/rent',
       sort_rank: -400 - daysOverdue,
+    })
+  }
+
+  // ------------------------------------------------------------
+  // 9. Triage inbox — unresolved inbound SMS awaiting assignment
+  // ------------------------------------------------------------
+  const { count: triageCount } = await supabase
+    .from('communications')
+    .select('id', { count: 'exact', head: true })
+    .eq('entity_type', 'triage')
+    .eq('direction', 'inbound')
+    .is('deleted_at', null)
+
+  if (triageCount && triageCount > 0) {
+    events.push({
+      id: 'triage-inbox',
+      severity: 'amber',
+      icon: '✉',
+      title: `${triageCount} inbound message${triageCount === 1 ? '' : 's'} awaiting triage`,
+      subtitle:
+        'Inbound texts from numbers not yet linked to a tenant — assign or dismiss from the Inbox.',
+      href: '/dashboard/inbox',
+      sort_rank: -200,
     })
   }
 

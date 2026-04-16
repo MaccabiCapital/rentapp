@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getUser } from '@/lib/supabase/get-user'
 import { signOut } from '@/app/actions/auth'
+import { getTriageCount } from '@/app/lib/queries/communications'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview', icon: '◆' },
+  { href: '/dashboard/inbox', label: 'Inbox', icon: '✉', badge: 'inbox' },
   { href: '/dashboard/properties', label: 'Properties', icon: '▦' },
   { href: '/dashboard/tenants', label: 'Tenants', icon: '◉' },
   { href: '/dashboard/rent', label: 'Rent', icon: '$' },
@@ -16,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
   { href: '/dashboard/team', label: 'My Team', icon: '◈' },
   { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
+  { href: '/dashboard/settings', label: 'Settings', icon: '⚐' },
 ] as const
 
 export default async function DashboardLayout({
@@ -28,6 +31,17 @@ export default async function DashboardLayout({
   const user = await getUser()
   if (!user) {
     redirect('/sign-in')
+  }
+
+  // Triage inbox badge — total unassigned inbound messages. Cheap
+  // count query, runs on every dashboard page render.
+  let inboxCount = 0
+  try {
+    inboxCount = await getTriageCount()
+  } catch {
+    // If the communications table isn't migrated yet (fresh deploy),
+    // silently show 0 instead of breaking the whole dashboard.
+    inboxCount = 0
   }
 
   const displayName =
@@ -53,7 +67,12 @@ export default async function DashboardLayout({
               <span className="w-4 text-center text-slate-400">
                 {item.icon}
               </span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {'badge' in item && item.badge === 'inbox' && inboxCount > 0 && (
+                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                  {inboxCount > 99 ? '99+' : inboxCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

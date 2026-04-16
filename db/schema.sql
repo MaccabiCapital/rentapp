@@ -501,6 +501,70 @@ create index communications_external_id_idx
   where deleted_at is null and external_id is not null;
 
 -- ------------------------------------------------------------
+-- landlord_phone_lines — per-landlord SMS/voice lines (Sprint 13b)
+-- ------------------------------------------------------------
+create type line_type as enum ('leasing', 'support');
+create type line_status as enum ('pending', 'active', 'suspended');
+
+create table public.landlord_phone_lines (
+  id                    uuid primary key default gen_random_uuid(),
+  owner_id              uuid not null references auth.users(id) on delete cascade,
+  line_type             line_type not null,
+  twilio_number         text,
+  retell_agent_id       text,
+  retell_webhook_secret text,
+  status                line_status not null default 'pending',
+  a2p_brand_id          text,
+  a2p_campaign_id       text,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  unique (owner_id, line_type)
+);
+
+create index phone_lines_owner_idx on public.landlord_phone_lines (owner_id);
+create unique index phone_lines_twilio_number_uidx
+  on public.landlord_phone_lines (twilio_number)
+  where twilio_number is not null;
+
+-- ------------------------------------------------------------
+-- tenant_sms_identities — phone → tenant resolver (Sprint 13b)
+-- ------------------------------------------------------------
+create table public.tenant_sms_identities (
+  id                  uuid primary key default gen_random_uuid(),
+  owner_id            uuid not null references auth.users(id) on delete cascade,
+  tenant_id           uuid not null references public.tenants(id) on delete cascade,
+  phone_number        text not null,
+  verified_at         timestamptz,
+  verification_method text,
+  created_at          timestamptz not null default now(),
+  unique (owner_id, phone_number)
+);
+
+create index tenant_sms_identities_tenant_idx
+  on public.tenant_sms_identities (tenant_id);
+create index tenant_sms_identities_phone_idx
+  on public.tenant_sms_identities (owner_id, phone_number);
+
+-- ------------------------------------------------------------
+-- retell_webhook_events — inbound idempotency + audit (Sprint 13b)
+-- ------------------------------------------------------------
+create table public.retell_webhook_events (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null references auth.users(id) on delete cascade,
+  event_type    text not null,
+  external_id   text not null,
+  payload       jsonb not null,
+  received_at   timestamptz not null default now(),
+  processed_at  timestamptz,
+  process_error text,
+  unique (owner_id, event_type, external_id)
+);
+
+create index retell_webhook_events_unprocessed_idx
+  on public.retell_webhook_events (received_at desc)
+  where processed_at is null;
+
+-- ------------------------------------------------------------
 -- listings — public landing pages for vacant units (Sprint 11)
 -- ------------------------------------------------------------
 -- Each row is a public-facing landing page URL the landlord can
@@ -606,6 +670,9 @@ alter table public.insurance_policies enable row level security;
 alter table public.policy_properties enable row level security;
 alter table public.rent_schedules enable row level security;
 alter table public.communications enable row level security;
+alter table public.landlord_phone_lines enable row level security;
+alter table public.tenant_sms_identities enable row level security;
+alter table public.retell_webhook_events enable row level security;
 
 -- Reference data: any authenticated user can read; no app-side
 -- write policies because writes come from migrations only.
@@ -827,6 +894,38 @@ create policy "owner can delete own communications"
   on public.communications for delete to authenticated
   using (owner_id = auth.uid());
 
+-- Landlord phone lines (Sprint 13b) — no delete policy; suspend
+-- instead so audit survives.
+create policy "owner can select own phone lines"
+  on public.landlord_phone_lines for select to authenticated
+  using (owner_id = auth.uid());
+create policy "owner can insert own phone lines"
+  on public.landlord_phone_lines for insert to authenticated
+  with check (owner_id = auth.uid());
+create policy "owner can update own phone lines"
+  on public.landlord_phone_lines for update to authenticated
+  using (owner_id = auth.uid());
+
+-- Tenant SMS identities (Sprint 13b)
+create policy "owner can select own sms identities"
+  on public.tenant_sms_identities for select to authenticated
+  using (owner_id = auth.uid());
+create policy "owner can insert own sms identities"
+  on public.tenant_sms_identities for insert to authenticated
+  with check (
+    owner_id = auth.uid()
+    and exists (
+      select 1 from public.tenants
+      where id = tenant_id and owner_id = auth.uid() and deleted_at is null
+    )
+  );
+create policy "owner can delete own sms identities"
+  on public.tenant_sms_identities for delete to authenticated
+  using (owner_id = auth.uid());
+
+-- retell_webhook_events intentionally has no policies. All access
+-- goes through the service role client from the webhook route.
+
 -- ------------------------------------------------------------
 -- Updated-at trigger
 -- ------------------------------------------------------------
@@ -867,6 +966,8 @@ create trigger set_updated_at before update on public.listings
 create trigger set_updated_at before update on public.insurance_policies
   for each row execute procedure public.set_updated_at();
 create trigger set_updated_at before update on public.rent_schedules
+  for each row execute procedure public.set_updated_at();
+create trigger set_updated_at before update on public.landlord_phone_lines
   for each row execute procedure public.set_updated_at();
 
 -- Auto-deactivate a unit's listings when the unit becomes occupied
