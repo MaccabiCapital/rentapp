@@ -459,6 +459,48 @@ create index rent_schedules_status_idx
   on public.rent_schedules (status) where deleted_at is null;
 
 -- ------------------------------------------------------------
+-- communications — polymorphic activity log (Sprint 13a)
+-- ------------------------------------------------------------
+-- Entity_type + entity_id pattern. The comm_entity_owned_by()
+-- helper function enforces that the pointed-to entity belongs to
+-- auth.uid() so we can't log against another landlord's tenant.
+create type comm_entity_type as enum (
+  'tenant',
+  'prospect',
+  'team_member',
+  'maintenance_request',
+  'lease',
+  'triage'
+);
+create type comm_direction as enum ('inbound', 'outbound');
+create type comm_channel as enum ('sms', 'call', 'email', 'whatsapp', 'note');
+
+create table public.communications (
+  id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null references auth.users(id) on delete cascade,
+  entity_type  comm_entity_type not null,
+  entity_id    uuid not null,
+  direction    comm_direction not null,
+  channel      comm_channel not null,
+  content      text not null,
+  external_id  text,
+  metadata     jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now(),
+  created_by   text not null default 'user',
+  deleted_at   timestamptz
+);
+
+create index communications_timeline_idx
+  on public.communications (entity_type, entity_id, created_at desc)
+  where deleted_at is null;
+create index communications_owner_idx
+  on public.communications (owner_id)
+  where deleted_at is null;
+create index communications_external_id_idx
+  on public.communications (external_id)
+  where deleted_at is null and external_id is not null;
+
+-- ------------------------------------------------------------
 -- listings — public landing pages for vacant units (Sprint 11)
 -- ------------------------------------------------------------
 -- Each row is a public-facing landing page URL the landlord can
@@ -563,6 +605,7 @@ alter table public.listings enable row level security;
 alter table public.insurance_policies enable row level security;
 alter table public.policy_properties enable row level security;
 alter table public.rent_schedules enable row level security;
+alter table public.communications enable row level security;
 
 -- Reference data: any authenticated user can read; no app-side
 -- write policies because writes come from migrations only.
@@ -729,6 +772,60 @@ create policy "owner can update own rent_schedules"
   on public.rent_schedules for update to authenticated using (owner_id = auth.uid());
 create policy "owner can delete own rent_schedules"
   on public.rent_schedules for delete to authenticated using (owner_id = auth.uid());
+
+-- Communications (Sprint 13a) — polymorphic, so inserts are gated
+-- by a helper that validates the pointed-to entity is owned by
+-- the caller. Prevents logging against another landlord's tenant.
+create or replace function public.comm_entity_owned_by(
+  p_entity_type comm_entity_type,
+  p_entity_id   uuid,
+  p_owner_id    uuid
+) returns boolean
+  language sql
+  stable
+  security invoker
+  set search_path = ''
+as $$
+  select case p_entity_type
+    when 'tenant' then exists (
+      select 1 from public.tenants
+      where id = p_entity_id and owner_id = p_owner_id and deleted_at is null
+    )
+    when 'prospect' then exists (
+      select 1 from public.prospects
+      where id = p_entity_id and owner_id = p_owner_id and deleted_at is null
+    )
+    when 'team_member' then exists (
+      select 1 from public.team_members
+      where id = p_entity_id and owner_id = p_owner_id and deleted_at is null
+    )
+    when 'maintenance_request' then exists (
+      select 1 from public.maintenance_requests
+      where id = p_entity_id and owner_id = p_owner_id
+    )
+    when 'lease' then exists (
+      select 1 from public.leases
+      where id = p_entity_id and owner_id = p_owner_id and deleted_at is null
+    )
+    when 'triage' then p_entity_id = p_owner_id
+  end
+$$;
+
+create policy "owner can select own communications"
+  on public.communications for select to authenticated
+  using (owner_id = auth.uid());
+create policy "owner can insert own communications"
+  on public.communications for insert to authenticated
+  with check (
+    owner_id = auth.uid()
+    and public.comm_entity_owned_by(entity_type, entity_id, auth.uid())
+  );
+create policy "owner can update own communications"
+  on public.communications for update to authenticated
+  using (owner_id = auth.uid());
+create policy "owner can delete own communications"
+  on public.communications for delete to authenticated
+  using (owner_id = auth.uid());
 
 -- ------------------------------------------------------------
 -- Updated-at trigger

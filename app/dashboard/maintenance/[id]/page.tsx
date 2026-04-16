@@ -11,6 +11,7 @@ import { MaintenanceStatusButtons } from '@/app/ui/maintenance-status-buttons'
 import { DeleteMaintenanceButton } from '@/app/ui/delete-maintenance-button'
 import { PhotoGallery } from '@/app/ui/photo-gallery'
 import { PhotoUploader } from '@/app/ui/photo-uploader'
+import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 
 function formatCurrency(value: number | null): string {
   if (value === null) return '—'
@@ -156,6 +157,12 @@ export default async function MaintenanceDetailPage({
       <div className="mt-6 flex justify-end">
         <DeleteMaintenanceButton requestId={request.id} title={request.title} />
       </div>
+
+      <CommunicationsTimeline
+        entityType="maintenance_request"
+        entityId={request.id}
+        description="Calls, texts, and vendor updates for this job."
+      />
     </div>
   )
 }

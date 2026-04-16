@@ -11,6 +11,7 @@ import { ProspectStageButtons } from '@/app/ui/prospect-stage-buttons'
 import { ConvertProspectButton } from '@/app/ui/convert-prospect-button'
 import { DeleteProspectButton } from '@/app/ui/delete-prospect-button'
 import { PROSPECT_SOURCE_LABELS } from '@/app/lib/schemas/prospect'
+import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 
 function formatDateTime(value: string | null) {
   if (!value) return '—'
@@ -177,6 +178,12 @@ export default async function ProspectDetailPage({
       <div className="mt-6 flex justify-end">
         <DeleteProspectButton prospectId={prospect.id} prospectName={name} />
       </div>
+
+      <CommunicationsTimeline
+        entityType="prospect"
+        entityId={prospect.id}
+        description="Calls, texts, showings — everything you've logged with this prospect."
+      />
     </div>
   )
 }

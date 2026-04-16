@@ -9,9 +9,11 @@
 // with name + phone + email so the landlord can paste it into
 // a text message or an intake form.
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import type { TeamMember } from '@/app/lib/schemas/team'
 import { displayTeamName } from '@/app/lib/schemas/team'
+import { logCommunication } from '@/app/actions/communications'
+import type { CommChannel, CommEntityType } from '@/app/lib/schemas/communications'
 
 type ContactActionsProps = {
   member: Pick<
@@ -21,6 +23,10 @@ type ContactActionsProps = {
   emailSubject?: string
   emailBody?: string
   size?: 'sm' | 'md'
+  // Pass these to enable the quick-log pill: every Call / Text / Email
+  // click auto-logs an outbound communication against this entity.
+  logEntityType?: CommEntityType
+  logEntityId?: string
 }
 
 export function ContactActions({
@@ -28,12 +34,33 @@ export function ContactActions({
   emailSubject,
   emailBody,
   size = 'md',
+  logEntityType,
+  logEntityId,
 }: ContactActionsProps) {
   const [copied, setCopied] = useState(false)
+  const [, startTransition] = useTransition()
+  const [logged, setLogged] = useState<string | null>(null)
 
   const name = displayTeamName(member)
   const phoneDigits = member.phone?.replace(/\D/g, '') ?? ''
   const altDigits = member.alt_phone?.replace(/\D/g, '') ?? ''
+
+  function quickLog(channel: CommChannel, content: string) {
+    if (!logEntityType || !logEntityId) return
+    const fd = new FormData()
+    fd.set('entity_type', logEntityType)
+    fd.set('entity_id', logEntityId)
+    fd.set('direction', 'outbound')
+    fd.set('channel', channel)
+    fd.set('content', content)
+    startTransition(async () => {
+      const res = await logCommunication({ success: true }, fd)
+      if (res && 'success' in res && res.success) {
+        setLogged(channel)
+        setTimeout(() => setLogged(null), 1500)
+      }
+    })
+  }
 
   const mailtoHref = member.email
     ? `mailto:${member.email}${
@@ -71,6 +98,7 @@ export function ContactActions({
       {phoneDigits && (
         <a
           href={`tel:${phoneDigits}`}
+          onClick={() => quickLog('call', `Called ${name}`)}
           className={`${baseClass} bg-indigo-600 text-white hover:bg-indigo-700`}
         >
           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -82,6 +110,7 @@ export function ContactActions({
       {altDigits && altDigits !== phoneDigits && (
         <a
           href={`tel:${altDigits}`}
+          onClick={() => quickLog('call', `Called ${name} (alt number)`)}
           className={`${baseClass} border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50`}
         >
           Call alt
@@ -90,6 +119,9 @@ export function ContactActions({
       {phoneDigits && (
         <a
           href={`sms:${phoneDigits}${emailBody ? `?body=${encodeURIComponent(emailBody)}` : ''}`}
+          onClick={() =>
+            quickLog('sms', emailBody ? `Texted ${name}: ${emailBody}` : `Texted ${name}`)
+          }
           className={`${baseClass} border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
         >
           <svg
@@ -111,6 +143,14 @@ export function ContactActions({
       {mailtoHref && (
         <a
           href={mailtoHref}
+          onClick={() =>
+            quickLog(
+              'email',
+              emailSubject
+                ? `Emailed ${name}: ${emailSubject}`
+                : `Emailed ${name}`,
+            )
+          }
           className={`${baseClass} border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
         >
           <svg
@@ -136,6 +176,11 @@ export function ContactActions({
       >
         {copied ? 'Copied!' : 'Copy contact'}
       </button>
+      {logEntityType && logged && (
+        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+          {logged} logged
+        </span>
+      )}
     </div>
   )
 }

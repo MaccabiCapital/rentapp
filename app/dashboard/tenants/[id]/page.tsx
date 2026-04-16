@@ -8,6 +8,7 @@ import { getTenant } from '@/app/lib/queries/tenants'
 import { getLeasesForTenant } from '@/app/lib/queries/leases'
 import { LeaseStatusBadge } from '@/app/ui/lease-status-badge'
 import { DeleteTenantButton } from '@/app/ui/delete-tenant-button'
+import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -131,6 +132,12 @@ export default async function TenantDetailPage({
           </table>
         </div>
       )}
+
+      <CommunicationsTimeline
+        entityType="tenant"
+        entityId={tenant.id}
+        description="Calls, texts, and notes about this tenant."
+      />
     </div>
   )
 }

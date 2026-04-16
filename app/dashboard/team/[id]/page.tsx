@@ -13,6 +13,7 @@ import {
 import { TeamRoleBadge } from '@/app/ui/team-role-badge'
 import { ContactActions } from '@/app/ui/contact-actions'
 import { DeleteTeamMemberButton } from '@/app/ui/delete-team-member-button'
+import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -95,7 +96,11 @@ export default async function TeamMemberDetailPage({
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
             Contact
           </h2>
-          <ContactActions member={member} />
+          <ContactActions
+            member={member}
+            logEntityType="team_member"
+            logEntityId={member.id}
+          />
         </div>
       )}
 
@@ -184,6 +189,12 @@ export default async function TeamMemberDetailPage({
           </table>
         </div>
       )}
+
+      <CommunicationsTimeline
+        entityType="team_member"
+        entityId={member.id}
+        description="Calls, texts, and notes with this vendor."
+      />
     </div>
   )
 }
