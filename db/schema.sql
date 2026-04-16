@@ -48,6 +48,7 @@ create type payment_status as enum (
 
 create type maintenance_status as enum (
   'open',
+  'assigned',
   'in_progress',
   'awaiting_parts',
   'resolved',

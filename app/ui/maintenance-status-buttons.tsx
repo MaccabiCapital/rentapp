@@ -20,9 +20,14 @@ type Transition = {
 
 const TRANSITIONS: Record<MaintenanceStatus, Transition[]> = {
   open: [
+    { to: 'assigned', label: 'Assign vendor', variant: 'primary' },
+    { to: 'in_progress', label: 'Start work', variant: 'default' },
+    { to: 'resolved', label: 'Mark resolved', variant: 'success' },
+  ],
+  assigned: [
     { to: 'in_progress', label: 'Start work', variant: 'primary' },
     { to: 'awaiting_parts', label: 'Awaiting parts', variant: 'default' },
-    { to: 'resolved', label: 'Mark resolved', variant: 'success' },
+    { to: 'open', label: 'Unassign', variant: 'muted' },
   ],
   in_progress: [
     { to: 'awaiting_parts', label: 'Awaiting parts', variant: 'default' },

@@ -174,7 +174,7 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
       'id, title, urgency, status, created_at, unit:units(unit_number, property:properties(name))',
     )
     .in('urgency', ['high', 'emergency'])
-    .in('status', ['open', 'in_progress', 'awaiting_parts'])
+    .in('status', ['open', 'assigned', 'in_progress', 'awaiting_parts'])
     .order('urgency', { ascending: false })
     .order('created_at', { ascending: true })
 

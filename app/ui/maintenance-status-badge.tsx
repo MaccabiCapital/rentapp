@@ -5,6 +5,7 @@ import {
 
 const STATUS_CLASSES: Record<MaintenanceStatus, string> = {
   open: 'bg-red-100 text-red-800',
+  assigned: 'bg-sky-100 text-sky-800',
   in_progress: 'bg-indigo-100 text-indigo-800',
   awaiting_parts: 'bg-yellow-100 text-yellow-800',
   resolved: 'bg-green-100 text-green-800',

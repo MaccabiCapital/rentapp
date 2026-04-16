@@ -13,6 +13,7 @@ import * as z from 'zod'
 
 export const MAINTENANCE_STATUS_VALUES = [
   'open',
+  'assigned',
   'in_progress',
   'awaiting_parts',
   'resolved',
@@ -23,6 +24,7 @@ export type MaintenanceStatus = (typeof MAINTENANCE_STATUS_VALUES)[number]
 
 export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
   open: 'Open',
+  assigned: 'Assigned',
   in_progress: 'In Progress',
   awaiting_parts: 'Awaiting Parts',
   resolved: 'Resolved',

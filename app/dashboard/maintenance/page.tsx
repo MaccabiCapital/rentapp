@@ -64,7 +64,12 @@ export default async function MaintenancePage({
   const filtered = all.filter((r) => {
     if (activeFilter === 'all') return true
     if (activeFilter === 'active') {
-      return r.status === 'open' || r.status === 'in_progress' || r.status === 'awaiting_parts'
+      return (
+        r.status === 'open' ||
+        r.status === 'assigned' ||
+        r.status === 'in_progress' ||
+        r.status === 'awaiting_parts'
+      )
     }
     return r.status === activeFilter
   })

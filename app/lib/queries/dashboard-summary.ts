@@ -67,7 +67,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     supabase
       .from('maintenance_requests')
       .select('id', { count: 'exact', head: true })
-      .in('status', ['open', 'in_progress', 'awaiting_parts']),
+      .in('status', ['open', 'assigned', 'in_progress', 'awaiting_parts']),
     supabase
       .from('prospects')
       .select('id', { count: 'exact', head: true })
