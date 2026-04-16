@@ -12,15 +12,17 @@ import { getUser } from '@/lib/supabase/get-user'
 import { getDashboardSummary } from '@/app/lib/queries/dashboard-summary'
 import { hasDemoData } from '@/app/lib/queries/demo-status'
 import { getUpcomingEvents } from '@/app/lib/queries/upcoming-events'
+import { getInsuranceSummary } from '@/app/lib/queries/insurance'
 import { DemoSeedButton } from '@/app/ui/demo-seed-button'
 import { UpcomingEvents } from '@/app/ui/upcoming-events'
 
 export default async function DashboardHome() {
-  const [user, summary, demoLoaded, events] = await Promise.all([
+  const [user, summary, demoLoaded, events, insurance] = await Promise.all([
     getUser(),
     getDashboardSummary(),
     hasDemoData(),
     getUpcomingEvents(),
+    getInsuranceSummary(),
   ])
 
   const displayName =
@@ -91,6 +93,27 @@ export default async function DashboardHome() {
             tone={summary.vacant_unit_count > 0 ? 'warning' : 'default'}
             href="/dashboard/properties"
           />
+          {insurance.total > 0 && (
+            <StatCard
+              label="Insurance"
+              value={insurance.total}
+              subLabel={
+                insurance.expired > 0
+                  ? `${insurance.expired} expired`
+                  : insurance.expiringSoon > 0
+                    ? `${insurance.expiringSoon} expiring in 60d`
+                    : 'All current'
+              }
+              tone={
+                insurance.expired > 0
+                  ? 'danger'
+                  : insurance.expiringSoon > 0
+                    ? 'warning'
+                    : 'default'
+              }
+              href="/dashboard/insurance"
+            />
+          )}
         </div>
       )}
 

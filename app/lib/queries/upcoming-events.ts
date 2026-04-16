@@ -13,10 +13,8 @@
 //   4. urgent_maintenance     — open or in-progress high/emergency request
 //   5. vacant_no_listing      — vacant unit without an active listing
 //   6. stale_compliance       — portfolio state with last_verified_on > 90d ago
-//
-// Future (not yet wired):
-//   - insurance_renewal — needs a policy table or an expiry column
-//   - rent_overdue — needs Stripe rent collection (Sprint 3)
+//   7. insurance_renewal      — policy expiring within 60d (Sprint 12 A)
+//   8. rent_overdue           — rent_schedule past due and not fully paid (Sprint 12 B)
 
 import { createServerClient } from '@/lib/supabase/server'
 import { now } from '@/app/lib/now'
@@ -287,6 +285,93 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
         sort_rank: 500,
       })
     }
+  }
+
+  // ------------------------------------------------------------
+  // 7. Insurance policies expiring in the next 60 days
+  //    (or already expired, which is a red alarm)
+  // ------------------------------------------------------------
+  const in60 = new Date(nowMs + 60 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
+  const { data: expiringPolicies } = await supabase
+    .from('insurance_policies')
+    .select('id, carrier, policy_type, expiry_date, auto_renewal')
+    .is('deleted_at', null)
+    .lte('expiry_date', in60)
+    .order('expiry_date', { ascending: true })
+
+  for (const row of expiringPolicies ?? []) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = row as any
+    const daysUntil = Math.floor(
+      (new Date(r.expiry_date).getTime() - nowMs) / (1000 * 60 * 60 * 24),
+    )
+    const severity: EventSeverity =
+      daysUntil < 0 || daysUntil <= 14 ? 'red' : 'amber'
+    const title =
+      daysUntil < 0
+        ? `${r.carrier} ${r.policy_type} policy expired ${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? '' : 's'} ago`
+        : `${r.carrier} ${r.policy_type} policy expires in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`
+    const subtitle = r.auto_renewal
+      ? 'Auto-renewal is on — verify with your agent that it processed.'
+      : 'Reach out to your agent to renew or shop for a replacement.'
+    events.push({
+      id: `insurance-${r.id}`,
+      severity,
+      icon: '✚',
+      title,
+      subtitle,
+      href: `/dashboard/insurance/${r.id}`,
+      // Expired policies get top priority within the red tier.
+      sort_rank: daysUntil < 0 ? -800 + daysUntil : daysUntil,
+    })
+  }
+
+  // ------------------------------------------------------------
+  // 8. Rent schedules past due and not fully paid
+  // ------------------------------------------------------------
+  const todayIso = new Date(nowMs).toISOString().slice(0, 10)
+  const { data: overdueRent } = await supabase
+    .from('rent_schedules')
+    .select(
+      'id, due_date, amount, paid_amount, lease:leases(tenant:tenants(first_name, last_name), unit:units(unit_number, property:properties(name)))',
+    )
+    .is('deleted_at', null)
+    .lt('due_date', todayIso)
+    .in('status', ['overdue', 'partial', 'due', 'upcoming'])
+    .order('due_date', { ascending: true })
+
+  for (const row of overdueRent ?? []) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = row as any
+    const amount = Number(r.amount)
+    const paid = Number(r.paid_amount ?? 0)
+    if (paid >= amount) continue
+    const open = amount - paid
+    const daysOverdue = Math.floor(
+      (nowMs - new Date(r.due_date).getTime()) / (1000 * 60 * 60 * 24),
+    )
+    const tenantName = r.lease?.tenant
+      ? `${r.lease.tenant.first_name} ${r.lease.tenant.last_name}`
+      : 'Tenant'
+    const unitLabel = r.lease?.unit?.property?.name
+      ? `${r.lease.unit.property.name}${r.lease.unit.unit_number ? ` · ${r.lease.unit.unit_number}` : ''}`
+      : 'Unit'
+    const fmtAmount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(open)
+    events.push({
+      id: `rent-overdue-${r.id}`,
+      severity: 'red',
+      icon: '$',
+      title: `Rent overdue: ${tenantName} owes ${fmtAmount}`,
+      subtitle: `${unitLabel} · ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past due`,
+      href: '/dashboard/rent',
+      sort_rank: -400 - daysOverdue,
+    })
   }
 
   // Sort: red first, then amber, then blue; within each tier,

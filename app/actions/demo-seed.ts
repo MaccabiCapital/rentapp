@@ -525,7 +525,9 @@ export async function seedDemoData(): Promise<ActionState> {
   // ------------------------------------------------------------
   // Team members (My Team — accountant, plumber, lawyer, etc.)
   // ------------------------------------------------------------
-  const { error: teamErr } = await supabase.from('team_members').insert([
+  const { data: seededTeam, error: teamErr } = await supabase
+    .from('team_members')
+    .insert([
     {
       owner_id: user.id,
       full_name: 'Linda Chen',
@@ -620,10 +622,83 @@ export async function seedDemoData(): Promise<ActionState> {
       notes: `${DEMO_TAG} Called him twice for tenant lockouts. Fast and fair priced.`,
     },
   ])
+    .select('id, role')
   if (teamErr) {
     return {
       success: false,
       message: `Failed to seed team members: ${teamErr.message}`,
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Insurance policies (Sprint 12)
+  // ------------------------------------------------------------
+  // Two policies to show the full range:
+  //   - Landlord dwelling policy (State Farm) covering both properties
+  //   - Umbrella excess-liability policy covering both properties,
+  //     renewing soon so the dashboard surfaces an upcoming event.
+  const insuranceAgent =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (seededTeam ?? []).find((m: any) => m.role === 'insurance_agent') ?? null
+
+  const { data: seededPolicies, error: insuranceErr } = await supabase
+    .from('insurance_policies')
+    .insert([
+      {
+        owner_id: user.id,
+        team_member_id: insuranceAgent?.id ?? null,
+        carrier: 'State Farm',
+        policy_number: 'SF-LL-88142-2026',
+        policy_type: 'landlord',
+        coverage_amount: 850000,
+        liability_limit: 500000,
+        annual_premium: 2840,
+        deductible: 2500,
+        effective_date: daysAgo(300),
+        expiry_date: daysAgo(-65), // 65 days out — outside urgent, warning
+        renewal_date: daysAgo(-50),
+        auto_renewal: true,
+        notes: `${DEMO_TAG} Bundled both buildings. Dwelling + loss of rent rider included.`,
+      },
+      {
+        owner_id: user.id,
+        team_member_id: insuranceAgent?.id ?? null,
+        carrier: 'Chubb',
+        policy_number: 'CH-UMB-22318',
+        policy_type: 'umbrella',
+        coverage_amount: 2000000,
+        liability_limit: 2000000,
+        annual_premium: 680,
+        deductible: 0,
+        effective_date: daysAgo(340),
+        expiry_date: daysAgo(-25), // 25 days out — amber in overview
+        renewal_date: daysAgo(-10),
+        auto_renewal: false,
+        notes: `${DEMO_TAG} $2M umbrella stacks on top of State Farm landlord policy.`,
+      },
+    ])
+    .select('id')
+  if (insuranceErr || !seededPolicies) {
+    return {
+      success: false,
+      message: `Failed to seed insurance policies: ${insuranceErr?.message ?? 'unknown error'}`,
+    }
+  }
+
+  // Both policies cover both demo properties (duplex + house).
+  const junctionRows: Array<{ policy_id: string; property_id: string }> = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const pol of seededPolicies as any[]) {
+    junctionRows.push({ policy_id: pol.id, property_id: duplex.id })
+    junctionRows.push({ policy_id: pol.id, property_id: house.id })
+  }
+  const { error: junctionErr } = await supabase
+    .from('policy_properties')
+    .insert(junctionRows)
+  if (junctionErr) {
+    return {
+      success: false,
+      message: `Failed to link insurance policies to properties: ${junctionErr.message}`,
     }
   }
 
@@ -776,6 +851,7 @@ Photos available on request. Showings by appointment only — current tenant sti
   revalidatePath('/dashboard/financials')
   revalidatePath('/dashboard/team')
   revalidatePath('/dashboard/listings')
+  revalidatePath('/dashboard/insurance')
   redirect('/dashboard/properties')
 }
 
@@ -810,6 +886,28 @@ export async function unseedDemoData(): Promise<ActionState> {
     .from('team_members')
     .update({ deleted_at: new Date().toISOString() })
     .ilike('notes', tagFilter)
+  // Insurance policies have a tagged notes column too. Junction
+  // rows in policy_properties cascade via on-delete-cascade when
+  // the policy row is soft-deleted? No — soft-delete is just a
+  // flag, so we delete the junction rows explicitly for any
+  // policy we're about to archive.
+  const demoPolicyIds =
+    (
+      await supabase
+        .from('insurance_policies')
+        .select('id')
+        .ilike('notes', tagFilter)
+    ).data?.map((r) => r.id) ?? []
+  if (demoPolicyIds.length > 0) {
+    await supabase
+      .from('policy_properties')
+      .delete()
+      .in('policy_id', demoPolicyIds)
+    await supabase
+      .from('insurance_policies')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', demoPolicyIds)
+  }
   // Look up demo property IDs once — we use them to cascade-clean
   // units and listings that live under demo properties.
   const demoPropertyIds =
@@ -842,5 +940,6 @@ export async function unseedDemoData(): Promise<ActionState> {
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
   revalidatePath('/dashboard/team')
+  revalidatePath('/dashboard/insurance')
   redirect('/dashboard')
 }

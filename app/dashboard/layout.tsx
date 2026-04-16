@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/listings', label: 'Listings', icon: '◎' },
   { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
   { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
+  { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
   { href: '/dashboard/team', label: 'My Team', icon: '◈' },
   { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
 ] as const
