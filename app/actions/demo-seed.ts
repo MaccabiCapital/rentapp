@@ -609,31 +609,143 @@ export async function seedDemoData(): Promise<ActionState> {
   }
 
   // ------------------------------------------------------------
-  // Listings (public landing page for the vacant Cambridge house)
+  // Listings (public landing pages — Sprint 11)
   // ------------------------------------------------------------
-  const { error: listingErr } = await supabase.from('listings').insert({
-    owner_id: user.id,
-    property_id: house.id,
-    unit_id: houseUnit.id,
-    slug: `cambridge-single-family-${Date.now().toString(36)}`,
-    title: 'Sunny 3BR single-family home near Harvard Square',
-    description: `Beautifully maintained 3-bedroom, 2-bathroom single-family home on a quiet Cambridge street, 10-min walk to Harvard Square and the Red Line. Recently renovated kitchen with new appliances, hardwood floors throughout, finished basement with laundry, private backyard, off-street parking for 2 cars.
+  //
+  // Three listings to show the full range of states:
+  //   - Cambridge house: live + active, 47 views + 3 inquiries
+  //   - Elm Unit 2: archived listing from when it was last rented
+  //     (inactive, shows history in the Inactive bin)
+  //   - Elm Unit 1: coming-soon listing scheduled for next month
+  //
+  // Slugs include a random suffix so re-seeding after unseed
+  // doesn't collide with the unique index.
+  const slugSuffix = Date.now().toString(36)
+  const { data: seededListings, error: listingErr } = await supabase
+    .from('listings')
+    .insert([
+      {
+        owner_id: user.id,
+        property_id: house.id,
+        unit_id: houseUnit.id,
+        slug: `cambridge-3br-single-family-${slugSuffix}`,
+        title: 'Sunny 3BR single-family home near Harvard Square',
+        description: `Beautifully maintained 3-bedroom, 2-bathroom single-family home on a quiet Cambridge street, 10-min walk to Harvard Square and the Red Line. Recently renovated kitchen with new appliances, hardwood floors throughout, finished basement with laundry, private backyard, off-street parking for 2 cars.
 
 Perfect for a family or professionals looking for a quiet, walkable neighborhood. No pets. 12-month lease minimum. First month + security deposit due at signing.
 
 Available ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} — schedule a showing below.`,
-    headline_rent: 3600,
-    available_on: daysAgo(-30), // 30 days from now
-    contact_email: user.email,
-    contact_phone: '617-555-0199',
-    is_active: true,
-    view_count: 0,
-    inquiry_count: 0,
-  })
-  if (listingErr) {
+        headline_rent: 3600,
+        available_on: daysAgo(-30), // 30 days from now
+        contact_email: user.email,
+        contact_phone: '617-555-0199',
+        is_active: true,
+        view_count: 47,
+        inquiry_count: 3,
+      },
+      {
+        owner_id: user.id,
+        property_id: duplex.id,
+        unit_id: duplexUnit2.id,
+        slug: `somerville-duplex-unit-2-archived-${slugSuffix}`,
+        title: 'Top floor 3BR duplex unit near Davis Square',
+        description: `Bright 3-bedroom, 1.5-bath upper-floor unit in a two-family in Somerville. Hardwood floors, large eat-in kitchen, in-unit washer/dryer, shared backyard. 15-min walk to Davis Square and the Red Line.`,
+        headline_rent: 2850,
+        available_on: daysAgo(120),
+        contact_email: user.email,
+        contact_phone: '617-555-0199',
+        is_active: false, // archived — unit is currently rented
+        view_count: 128,
+        inquiry_count: 7,
+      },
+      {
+        owner_id: user.id,
+        property_id: duplex.id,
+        unit_id: duplexUnit1.id,
+        slug: `somerville-2br-coming-soon-${slugSuffix}`,
+        title: '2BR in Somerville available next month',
+        description: `Cozy 2-bedroom unit in a restored 1928 duplex. Current tenant is relocating for work — unit available starting next month. Original details preserved, updated systems, steps to bus line, short walk to Davis Square nightlife.
+
+Photos available on request. Showings by appointment only — current tenant still in residence.`,
+        headline_rent: 2500,
+        available_on: daysAgo(-45), // 45 days from now
+        contact_email: user.email,
+        contact_phone: '617-555-0199',
+        is_active: true,
+        view_count: 12,
+        inquiry_count: 1,
+      },
+    ])
+    .select('id, slug')
+  if (listingErr || !seededListings || seededListings.length !== 3) {
     return {
       success: false,
-      message: `Failed to seed listing: ${listingErr.message}`,
+      message: `Failed to seed listings: ${listingErr?.message ?? 'unknown error'}`,
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Prospects from listing inquiries (feel-real activity)
+  // ------------------------------------------------------------
+  // These prospects look like they came in through the public
+  // listing form — source='landing_page' and a note referencing
+  // the listing slug, so it matches what submitInquiry would do.
+  const cambridgeListing = seededListings.find((l) =>
+    l.slug.includes('cambridge-3br'),
+  )
+  const somervilleComingSoon = seededListings.find((l) =>
+    l.slug.includes('coming-soon'),
+  )
+  if (cambridgeListing && somervilleComingSoon) {
+    const { error: inquiryErr } = await supabase.from('prospects').insert([
+      {
+        owner_id: user.id,
+        unit_id: houseUnit.id,
+        first_name: 'Jessica',
+        last_name: 'Morrison',
+        email: 'jessica.morrison@example.com',
+        phone: '617-555-0412',
+        stage: 'inquired',
+        source: 'landing_page',
+        inquiry_message:
+          'Hi! Saw your listing and I love that it\'s a 10-min walk to Harvard. I\'m a postdoc researcher starting a position at HMS in June. No pets, non-smoker, happy to provide references. When can I schedule a showing?',
+        follow_up_at: daysAgoIso(-2),
+        notes: `${DEMO_TAG} Submitted via public listing /${cambridgeListing.slug}`,
+      },
+      {
+        owner_id: user.id,
+        unit_id: houseUnit.id,
+        first_name: 'Daniel',
+        last_name: 'Park',
+        email: 'dpark.rentals@example.com',
+        phone: '857-555-0178',
+        stage: 'application_sent',
+        source: 'landing_page',
+        inquiry_message:
+          'Interested in the Cambridge 3BR. Family of 3 relocating from Chicago, my wife just accepted a position at Mass General. Move-in target June 1.',
+        follow_up_at: daysAgoIso(-5),
+        notes: `${DEMO_TAG} Submitted via public listing /${cambridgeListing.slug} — sent app 3 days ago.`,
+      },
+      {
+        owner_id: user.id,
+        unit_id: duplexUnit1.id,
+        first_name: 'Amanda',
+        last_name: 'Blake',
+        email: 'ablake99@example.com',
+        phone: null,
+        stage: 'inquired',
+        source: 'landing_page',
+        inquiry_message:
+          'Is this still available for July 1 move-in? Working from home and looking for a quiet place in Somerville.',
+        follow_up_at: daysAgoIso(-1),
+        notes: `${DEMO_TAG} Submitted via public listing /${somervilleComingSoon.slug}`,
+      },
+    ])
+    if (inquiryErr) {
+      return {
+        success: false,
+        message: `Failed to seed landing-page prospects: ${inquiryErr.message}`,
+      }
     }
   }
 
