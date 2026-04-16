@@ -11,13 +11,16 @@ import Link from 'next/link'
 import { getUser } from '@/lib/supabase/get-user'
 import { getDashboardSummary } from '@/app/lib/queries/dashboard-summary'
 import { hasDemoData } from '@/app/lib/queries/demo-status'
+import { getUpcomingEvents } from '@/app/lib/queries/upcoming-events'
 import { DemoSeedButton } from '@/app/ui/demo-seed-button'
+import { UpcomingEvents } from '@/app/ui/upcoming-events'
 
 export default async function DashboardHome() {
-  const [user, summary, demoLoaded] = await Promise.all([
+  const [user, summary, demoLoaded, events] = await Promise.all([
     getUser(),
     getDashboardSummary(),
     hasDemoData(),
+    getUpcomingEvents(),
   ])
 
   const displayName =
@@ -39,6 +42,12 @@ export default async function DashboardHome() {
             : 'Here is a quick look at your portfolio. Use the sidebar to drill into any module.'}
         </p>
       </div>
+
+      {!isEmpty && events.length > 0 && (
+        <div className="mb-10">
+          <UpcomingEvents events={events} />
+        </div>
+      )}
 
       {!isEmpty && (
         <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

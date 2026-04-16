@@ -210,6 +210,16 @@ export async function seedDemoData(): Promise<ActionState> {
   // ------------------------------------------------------------
   // Leases
   // ------------------------------------------------------------
+  // Maria's lease ends in 45 days — lands in the "Expiring 31-90 days"
+  // blue bucket on /dashboard/renewals so the landlord can start
+  // a renewal offer.
+  const mariaEndDate = daysAgo(-45) // 45 days from now
+
+  // James's lease end is still far out, but he gave notice 5 days ago.
+  // This makes him appear in the red "Tenant gave notice" section.
+  const jamesNoticeDate = daysAgo(5)
+  const jamesEndDate = yearsFromNow(1)
+
   const { data: leaseRows, error: lErr } = await supabase
     .from('leases')
     .insert([
@@ -218,17 +228,15 @@ export async function seedDemoData(): Promise<ActionState> {
         unit_id: duplexUnit1.id,
         tenant_id: maria.id,
         status: 'active',
-        start_date: daysAgo(365 * 2 + 30),
-        end_date: yearsFromNow(0).replace(/^\d{4}/, (y) =>
-          String(Number(y) + 1),
-        ),
+        start_date: daysAgo(365 - 45), // 1 year lease expiring in 45 days
+        end_date: mariaEndDate,
         monthly_rent: 2400,
         security_deposit: 2400,
         rent_due_day: 1,
         late_fee_amount: 50,
         late_fee_grace_days: 5,
-        signed_at: daysAgoIso(365 * 2 + 25),
-        notes: `${DEMO_TAG} 2-year lease, auto-renewed.`,
+        signed_at: daysAgoIso(365 - 50),
+        notes: `${DEMO_TAG} 1-year lease expiring next month — perfect renewal candidate.`,
       },
       {
         owner_id: user.id,
@@ -236,14 +244,15 @@ export async function seedDemoData(): Promise<ActionState> {
         tenant_id: james.id,
         status: 'active',
         start_date: daysAgo(120),
-        end_date: yearsFromNow(1),
+        end_date: jamesEndDate,
         monthly_rent: 2850,
         security_deposit: 2850,
         rent_due_day: 1,
         late_fee_amount: 75,
         late_fee_grace_days: 5,
         signed_at: daysAgoIso(118),
-        notes: `${DEMO_TAG} 1-year lease.`,
+        tenant_notice_given_on: jamesNoticeDate,
+        notes: `${DEMO_TAG} Tenant gave 30-day notice last week — relocating for work.`,
       },
     ])
     .select('id, unit_id, tenant_id')
@@ -251,6 +260,12 @@ export async function seedDemoData(): Promise<ActionState> {
     return { success: false, message: 'Failed to seed leases.' }
   }
   const [lease1, lease2] = leaseRows
+
+  // Flip duplex unit 2 to 'notice_given' status to match James's notice
+  await supabase
+    .from('units')
+    .update({ status: 'notice_given' })
+    .eq('id', duplexUnit2.id)
 
   // ------------------------------------------------------------
   // Maintenance requests
