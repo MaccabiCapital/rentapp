@@ -96,22 +96,68 @@ export default async function DashboardLayout({
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col">
-        {/* Mobile top bar (simplified; real mobile nav comes in a later sprint) */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 md:hidden">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-slate-900" />
-            <span className="text-base font-semibold tracking-tight">
-              Rentapp
-            </span>
-          </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="text-sm text-slate-700 hover:text-slate-900"
-            >
-              Sign out
-            </button>
-          </form>
+        {/* Mobile top bar with a details-based nav drawer. No client
+            JS required — the summary/details browser primitive opens
+            the menu. */}
+        <header className="md:hidden">
+          <details className="group border-b border-slate-200 bg-white">
+            <summary className="flex h-16 cursor-pointer list-none items-center justify-between px-6 [&::-webkit-details-marker]:hidden">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-white transition-transform group-open:rotate-90">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    stroke="currentColor"
+                    className="h-5 w-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                    />
+                  </svg>
+                </span>
+                <span className="text-base font-semibold tracking-tight">
+                  Rentapp
+                </span>
+                {inboxCount > 0 && (
+                  <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                    {inboxCount > 99 ? '99+' : inboxCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-slate-500">{displayName}</span>
+            </summary>
+            <nav className="space-y-1 border-t border-slate-200 p-4">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <span className="w-4 text-center text-slate-400">
+                    {item.icon}
+                  </span>
+                  <span className="flex-1">{item.label}</span>
+                  {'badge' in item && item.badge === 'inbox' && inboxCount > 0 && (
+                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                      {inboxCount > 99 ? '99+' : inboxCount}
+                    </span>
+                  )}
+                </Link>
+              ))}
+              <form action={signOut} className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Sign out
+                </button>
+              </form>
+            </nav>
+          </details>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>

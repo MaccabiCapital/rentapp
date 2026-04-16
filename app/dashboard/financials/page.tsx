@@ -76,6 +76,12 @@ export default async function FinancialsPage({
           >
             Export CSV
           </Link>
+          <a
+            href={`/dashboard/financials/tax-package?from=${fromDate}&to=${toDate}`}
+            className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Tax package PDF
+          </a>
         </div>
       </div>
 
@@ -113,7 +119,7 @@ export default async function FinancialsPage({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-zinc-200">
             <thead className="bg-zinc-50">
               <tr>
@@ -170,7 +176,7 @@ export default async function FinancialsPage({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-zinc-200">
             <thead className="bg-zinc-50">
               <tr>

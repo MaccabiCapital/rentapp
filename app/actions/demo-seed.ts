@@ -843,6 +843,165 @@ Photos available on request. Showings by appointment only — current tenant sti
     }
   }
 
+  // ------------------------------------------------------------
+  // Communications log (Sprint 13a) — realistic timeline entries
+  // so the freshly-seeded demo doesn't show empty timelines on
+  // every tenant/team detail page, and the Inbox has one triage
+  // example to click through.
+  // ------------------------------------------------------------
+  const mariaId = maria.id
+  const jamesId = james.id
+  // Look up team members by role so we can attach a few comms
+  // and not rely on seededTeam ordering (role is stable).
+  const { data: teamForComms } = await supabase
+    .from('team_members')
+    .select('id, role, full_name, company_name')
+    .in('role', ['plumber', 'accountant', 'lawyer'])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const joe = (teamForComms ?? []).find((t: any) => t.role === 'plumber')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const linda = (teamForComms ?? []).find((t: any) => t.role === 'accountant')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lawyer = (teamForComms ?? []).find((t: any) => t.role === 'lawyer')
+
+  const commRows: Array<{
+    owner_id: string
+    entity_type:
+      | 'tenant'
+      | 'prospect'
+      | 'team_member'
+      | 'maintenance_request'
+      | 'lease'
+      | 'triage'
+    entity_id: string
+    direction: 'inbound' | 'outbound'
+    channel: 'sms' | 'call' | 'email' | 'whatsapp' | 'note'
+    content: string
+    metadata?: Record<string, unknown>
+    created_by: string
+  }> = []
+
+  // Maria tenant: rent-related back-and-forth
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'tenant',
+    entity_id: mariaId,
+    direction: 'outbound',
+    channel: 'sms',
+    content:
+      "Hi Maria — just a reminder that rent for this month is due on the 1st. Let me know if anything's off.",
+    created_by: 'user',
+  })
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'tenant',
+    entity_id: mariaId,
+    direction: 'inbound',
+    channel: 'sms',
+    content:
+      "Got it, thanks! I'll send it via Zelle Thursday. Also, the kitchen faucet is dripping again — can you send someone?",
+    created_by: 'user',
+  })
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'tenant',
+    entity_id: mariaId,
+    direction: 'outbound',
+    channel: 'note',
+    content:
+      'Talked to Maria about the faucet — looped Joe Martinez in, he said Friday AM works for him.',
+    created_by: 'user',
+  })
+
+  // James tenant: notice-to-vacate follow-up
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'tenant',
+    entity_id: jamesId,
+    direction: 'outbound',
+    channel: 'call',
+    content:
+      "Called James about his 60-day notice. He's relocating to Austin on June 15th. Agreed to leave the unit professionally cleaned.",
+    created_by: 'user',
+  })
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'tenant',
+    entity_id: jamesId,
+    direction: 'outbound',
+    channel: 'email',
+    content:
+      "Sent James the move-out checklist and forwarded the $250 cleaning-deposit policy. He confirmed receipt.",
+    created_by: 'user',
+  })
+
+  // Team member comms
+  if (joe) {
+    commRows.push({
+      owner_id: user.id,
+      entity_type: 'team_member',
+      entity_id: joe.id,
+      direction: 'outbound',
+      channel: 'call',
+      content:
+        "Called Joe about Maria's kitchen faucet. He can come Friday 9–11am. Quoted $120 + parts.",
+      created_by: 'user',
+    })
+  }
+  if (linda) {
+    commRows.push({
+      owner_id: user.id,
+      entity_type: 'team_member',
+      entity_id: linda.id,
+      direction: 'outbound',
+      channel: 'email',
+      content:
+        "Sent Linda the Q1 expenses export for both properties. She'll reconcile before the April 15 deadline.",
+      created_by: 'user',
+    })
+  }
+  if (lawyer) {
+    commRows.push({
+      owner_id: user.id,
+      entity_type: 'team_member',
+      entity_id: lawyer.id,
+      direction: 'inbound',
+      channel: 'email',
+      content:
+        'Reviewed the MA notice-to-quit template for non-payment — attached a slightly updated version compliant with the Nov 2025 housing-court rule change.',
+      created_by: 'user',
+    })
+  }
+
+  // Triage inbox: one inbound SMS from a phone not yet linked to
+  // any tenant, so /dashboard/inbox has something to demonstrate.
+  commRows.push({
+    owner_id: user.id,
+    entity_type: 'triage',
+    entity_id: user.id,
+    direction: 'inbound',
+    channel: 'sms',
+    content:
+      "Hi — I think I have the wrong number, sorry. I was trying to reach Sarah about the Somerville apartment listing. Is this the landlord?",
+    metadata: {
+      from_number: '+16175550199',
+      stage: 'chat_analyzed',
+      analysis: null,
+      demo: true,
+    },
+    created_by: 'webhook',
+  })
+
+  const { error: commErr } = await supabase
+    .from('communications')
+    .insert(commRows)
+  if (commErr) {
+    return {
+      success: false,
+      message: `Failed to seed communications: ${commErr.message}`,
+    }
+  }
+
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/properties')
   revalidatePath('/dashboard/tenants')
@@ -852,6 +1011,7 @@ Photos available on request. Showings by appointment only — current tenant sti
   revalidatePath('/dashboard/team')
   revalidatePath('/dashboard/listings')
   revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/inbox')
   redirect('/dashboard/properties')
 }
 
@@ -886,6 +1046,17 @@ export async function unseedDemoData(): Promise<ActionState> {
     .from('team_members')
     .update({ deleted_at: new Date().toISOString() })
     .ilike('notes', tagFilter)
+  // Communications tied to soft-deleted tenants/team/maintenance
+  // become invisible to the UI automatically, so we don't need to
+  // scrub the per-entity rows. We DO explicitly clean the triage
+  // example we seeded since that one lives under entity_type='triage'
+  // (not joined to any entity) and would linger in the inbox forever.
+  await supabase
+    .from('communications')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('entity_type', 'triage')
+    .eq('created_by', 'webhook')
+    .contains('metadata', { demo: true })
   // Insurance policies have a tagged notes column too. Junction
   // rows in policy_properties cascade via on-delete-cascade when
   // the policy row is soft-deleted? No — soft-delete is just a
@@ -941,5 +1112,6 @@ export async function unseedDemoData(): Promise<ActionState> {
   revalidatePath('/dashboard/financials')
   revalidatePath('/dashboard/team')
   revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/inbox')
   redirect('/dashboard')
 }

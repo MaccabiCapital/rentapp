@@ -132,7 +132,7 @@ export default async function PropertyLedgerPage({
       <h2 className="mt-10 mb-3 text-lg font-semibold text-zinc-900">
         Expenses by category
       </h2>
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-zinc-200">
           <thead className="bg-zinc-50">
             <tr>
@@ -188,7 +188,7 @@ export default async function PropertyLedgerPage({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-zinc-200">
             <thead className="bg-zinc-50">
               <tr>
@@ -218,7 +218,7 @@ export default async function PropertyLedgerPage({
           <p className="text-sm text-zinc-600">No expenses in this period.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-zinc-200">
             <thead className="bg-zinc-50">
               <tr>

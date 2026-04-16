@@ -176,7 +176,7 @@ function Section({
         </h2>
         <p className={`mt-1 text-xs ${toneTitleClass}`}>{description}</p>
       </div>
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-zinc-200">
           <thead className="bg-zinc-50">
             <tr>
