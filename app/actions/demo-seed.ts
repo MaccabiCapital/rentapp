@@ -523,6 +523,7 @@ export async function seedDemoData(): Promise<ActionState> {
       preferred_contact: 'email',
       hourly_rate: 275,
       specialty: 'Rental property tax strategy, Schedule E specialist',
+      available_24_7: false,
       notes: `${DEMO_TAG} Files my returns every March, knows the duplex inside and out.`,
     },
     {
@@ -555,6 +556,7 @@ export async function seedDemoData(): Promise<ActionState> {
       license_number: 'MA-ELEC-48291',
       license_state: 'MA',
       specialty: 'Old-house rewiring, panel upgrades, knob-and-tube replacement',
+      available_24_7: false,
       notes: `${DEMO_TAG} Licensed master electrician, reliable and fast.`,
     },
     {
@@ -571,6 +573,7 @@ export async function seedDemoData(): Promise<ActionState> {
       license_state: 'MA',
       hourly_rate: 425,
       specialty: 'MA landlord-tenant law, eviction specialist, lease review',
+      available_24_7: false,
       notes: `${DEMO_TAG} Retainer $2500/yr, handles evictions start to finish.`,
     },
     {
@@ -584,6 +587,7 @@ export async function seedDemoData(): Promise<ActionState> {
       phone: '617-555-0346',
       preferred_contact: 'email',
       specialty: 'Landlord policies, umbrella coverage, loss of rent riders',
+      available_24_7: false,
       notes: `${DEMO_TAG} Bundled my 2 properties, saved ~$600/yr vs previous agent.`,
     },
     {
