@@ -143,6 +143,16 @@ export async function updateInsurancePolicy(
   }
 
   const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return {
+      success: false,
+      message: 'You must be signed in to update an insurance policy.',
+    }
+  }
+
   const { error } = await supabase
     .from('insurance_policies')
     .update({
@@ -162,6 +172,7 @@ export async function updateInsurancePolicy(
       document_url: parsed.data.document_url ?? null,
     })
     .eq('id', id)
+    .eq('owner_id', user.id) // defense in depth beyond RLS
 
   if (error) {
     return {
@@ -190,10 +201,17 @@ export async function updateInsurancePolicy(
 
 export async function deleteInsurancePolicy(id: string): Promise<ActionState> {
   const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
   const { error } = await supabase
     .from('insurance_policies')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('owner_id', user.id) // defense in depth beyond RLS
 
   if (error) {
     return { success: false, message: 'Failed to delete insurance policy.' }

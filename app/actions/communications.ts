@@ -110,12 +110,14 @@ export async function softDeleteCommunication(
     .from('communications')
     .select('entity_type, entity_id')
     .eq('id', id)
+    .eq('owner_id', user.id)
     .maybeSingle()
 
   const { error } = await supabase
     .from('communications')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('owner_id', user.id) // defense in depth beyond RLS
 
   if (error) {
     return {
@@ -131,5 +133,65 @@ export async function softDeleteCommunication(
     if (path) revalidatePath(path)
   }
 
+  return { success: true }
+}
+
+// Edit the content of a previously-logged communication. Useful
+// for fixing typos or adding detail to a manually-logged entry.
+// We intentionally don't let users change the entity/direction/
+// channel — if those are wrong, softDelete and re-log.
+export async function editCommunication(
+  id: string,
+  newContent: string,
+): Promise<ActionState> {
+  const trimmed = newContent.trim()
+  if (trimmed.length === 0) {
+    return {
+      success: false,
+      message: 'Content can\u2019t be empty.',
+    }
+  }
+
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
+
+  // Read entity so we know which page to revalidate. Also serves
+  // as an ownership check — RLS will filter the row out if it
+  // belongs to someone else.
+  const { data: row } = await supabase
+    .from('communications')
+    .select('entity_type, entity_id, metadata')
+    .eq('id', id)
+    .eq('owner_id', user.id)
+    .maybeSingle()
+  if (!row) {
+    return { success: false, message: 'Could not find that entry.' }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = row as any
+
+  // Preserve existing metadata and add an edit marker.
+  const existingMeta = (r.metadata ?? {}) as Record<string, unknown>
+  const nextMeta = {
+    ...existingMeta,
+    edited_at: new Date().toISOString(),
+  }
+
+  const { error } = await supabase
+    .from('communications')
+    .update({ content: trimmed, metadata: nextMeta })
+    .eq('id', id)
+    .eq('owner_id', user.id)
+  if (error) {
+    return { success: false, message: `Failed to edit: ${error.message}` }
+  }
+
+  const path = pickRevalidatePath(r.entity_type, r.entity_id)
+  if (path) revalidatePath(path)
   return { success: true }
 }

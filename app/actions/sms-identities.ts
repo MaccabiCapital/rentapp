@@ -145,10 +145,17 @@ export async function dismissTriage(
   triageCommId: string,
 ): Promise<ActionState> {
   const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
   const { error } = await supabase
     .from('communications')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', triageCommId)
+    .eq('owner_id', user.id) // defense in depth beyond RLS
   if (error) {
     return { success: false, message: `Could not dismiss: ${error.message}` }
   }

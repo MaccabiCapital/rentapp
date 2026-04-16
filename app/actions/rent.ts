@@ -179,7 +179,10 @@ async function recomputeStaleStatuses(
 
   let count = 0
 
-  // Overdue: due_date < today and status in (upcoming, due, partial)
+  // Overdue: due_date < today and status in (upcoming, due). We
+  // intentionally do NOT touch 'partial' rows — those stay labeled
+  // 'partial' indefinitely so the UI tone conveys urgency
+  // separately (see rent-schedule-status.ts).
   const { data: overdueRows, error: overdueErr } = await supabase
     .from('rent_schedules')
     .select('id')

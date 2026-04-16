@@ -1036,7 +1036,39 @@ export async function unseedDemoData(): Promise<ActionState> {
     .from('prospects')
     .update({ deleted_at: new Date().toISOString() })
     .ilike('notes', tagFilter)
+  // Rent schedules don't have a tagged notes column — find them
+  // by joining through demo leases (tagged) and delete those
+  // rows before we drop the leases themselves.
+  const demoLeaseIdsForSchedules =
+    (
+      await supabase
+        .from('leases')
+        .select('id')
+        .ilike('notes', tagFilter)
+    ).data?.map((r) => r.id) ?? []
+  if (demoLeaseIdsForSchedules.length > 0) {
+    await supabase
+      .from('rent_schedules')
+      .delete()
+      .in('lease_id', demoLeaseIdsForSchedules)
+  }
   await supabase.from('leases').delete().ilike('notes', tagFilter)
+  // Tenant SMS identities cascade on tenant delete in the DB, but
+  // we soft-delete tenants rather than hard-delete, so the
+  // identities would linger. Scrub them explicitly.
+  const demoTenantIds =
+    (
+      await supabase
+        .from('tenants')
+        .select('id')
+        .ilike('notes', tagFilter)
+    ).data?.map((r) => r.id) ?? []
+  if (demoTenantIds.length > 0) {
+    await supabase
+      .from('tenant_sms_identities')
+      .delete()
+      .in('tenant_id', demoTenantIds)
+  }
   await supabase
     .from('tenants')
     .update({ deleted_at: new Date().toISOString() })

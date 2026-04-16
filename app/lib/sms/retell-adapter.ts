@@ -119,10 +119,18 @@ export async function provisionPhoneNumber(
     '[SPRINT-13 STUB] provisionPhoneNumber called with',
     input.areaCode ?? '(no area code)',
   )
-  // Use 555 prefix to signal this is fake.
-  const tail = randomBytes(2).readUInt16BE(0).toString().padStart(4, '0')
+  // Use 555 prefix to signal this is fake. Clamp to exactly 4
+  // digits — readUInt16BE ranges up to 65535, which padStart(4)
+  // wouldn't shorten, producing 5-digit tails that would fail
+  // libphonenumber validation. (Review finding.)
+  const tail = (randomBytes(2).readUInt16BE(0) % 10000)
+    .toString()
+    .padStart(4, '0')
+  // Area code is always 3 digits — fall back to 555 so the full
+  // number is always a valid 10-digit North American format.
+  const areaCode = (input.areaCode ?? '555').padStart(3, '0').slice(0, 3)
   return {
-    phone_number: `+1555${input.areaCode ?? '000'}${tail}`,
+    phone_number: `+1555${areaCode}${tail}`,
   }
 }
 

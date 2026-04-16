@@ -10,7 +10,7 @@
 import Link from 'next/link'
 import { getTriageQueue } from '@/app/lib/queries/communications'
 import { getTenantsForPicker } from '@/app/lib/queries/tenants'
-import { getLeasesForTenant } from '@/app/lib/queries/leases'
+import { createServerClient } from '@/lib/supabase/server'
 import { formatPhoneForDisplay } from '@/app/lib/phone'
 import { TriageItemActions } from '@/app/ui/triage-item-actions'
 
@@ -27,35 +27,43 @@ export default async function InboxPage() {
   const triage = await getTriageQueue()
   const tenants = await getTenantsForPicker()
 
-  // Build a lightweight "Tenant · unit" label for the assign dropdown.
-  // Best-effort lookup of one active lease per tenant. If performance
-  // matters later we can batch this in a single query.
-  const tenantOptions = await Promise.all(
-    tenants.map(async (t) => {
-      let unit_label: string | null = null
-      try {
-        const leases = await getLeasesForTenant(t.id)
-        const active = leases.find((l) => l.status === 'active')
-        if (active?.unit) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const u = active.unit as any
-          unit_label = u?.property?.name
-            ? `${u.property.name}${u.unit_number ? ` · ${u.unit_number}` : ''}`
-            : u?.unit_number ?? null
-        }
-      } catch {
-        // leaving unit_label null is fine
+  // Single query for every active lease's unit label — replaces an
+  // N+1 getLeasesForTenant loop. Returns a map from tenant_id to
+  // unit_label string.
+  const supabase = await createServerClient()
+  const unitLabelByTenantId = new Map<string, string>()
+  if (tenants.length > 0) {
+    const { data: activeLeases } = await supabase
+      .from('leases')
+      .select(
+        'tenant_id, unit:units!inner(unit_number, property:properties!inner(name))',
+      )
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .in(
+        'tenant_id',
+        tenants.map((t) => t.id),
+      )
+    for (const row of activeLeases ?? []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = row as any
+      const label = r.unit?.property?.name
+        ? `${r.unit.property.name}${r.unit.unit_number ? ` · ${r.unit.unit_number}` : ''}`
+        : (r.unit?.unit_number ?? '')
+      if (r.tenant_id && label) {
+        unitLabelByTenantId.set(r.tenant_id, label)
       }
-      return {
-        id: t.id,
-        name:
-          `${t.first_name ?? ''} ${t.last_name ?? ''}`.trim() ||
-          t.email ||
-          'Tenant',
-        unit_label,
-      }
-    }),
-  )
+    }
+  }
+
+  const tenantOptions = tenants.map((t) => ({
+    id: t.id,
+    name:
+      `${t.first_name ?? ''} ${t.last_name ?? ''}`.trim() ||
+      t.email ||
+      'Tenant',
+    unit_label: unitLabelByTenantId.get(t.id) ?? null,
+  }))
 
   if (triage.length === 0) {
     return (

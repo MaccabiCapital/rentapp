@@ -71,43 +71,104 @@ Open [http://localhost:3000](http://localhost:3000). You should see the landing 
 
 ## Project structure
 
+Current shape as of Sprint 13:
+
 ```
 rentapp/
 ├── app/
-│   ├── layout.tsx              # Root layout with fonts + branding
-│   ├── page.tsx                # Landing page (redirects to /dashboard if signed in)
-│   ├── (auth)/                 # Route group for unauthenticated pages
-│   │   ├── layout.tsx          # Auth-pages layout (centered card)
-│   │   ├── sign-in/page.tsx
-│   │   ├── sign-up/page.tsx
-│   │   └── sign-up/verify/page.tsx
-│   ├── dashboard/              # Protected routes
-│   │   ├── layout.tsx          # Sidebar nav + real auth enforcement
-│   │   ├── page.tsx            # Dashboard home
-│   │   ├── properties/page.tsx
-│   │   ├── tenants/page.tsx
-│   │   ├── rent/page.tsx
-│   │   ├── maintenance/page.tsx
-│   │   ├── prospects/page.tsx
-│   │   ├── renewals/page.tsx
-│   │   └── financials/page.tsx
-│   ├── auth/callback/route.ts  # Supabase email confirmation handler
-│   ├── actions/auth.ts         # Server actions: signUp / signIn / signOut
-│   ├── lib/definitions.ts      # Zod schemas + shared TS types
-│   └── ui/                     # Shared components (forms, empty states)
-├── lib/
-│   └── supabase/
-│       ├── server.ts           # SSR client for server components
-│       ├── client.ts           # Browser client for client components
-│       ├── proxy-client.ts     # Session refresh for proxy.ts
-│       └── get-user.ts         # Safe auth check (returns null on any error)
+│   ├── (auth)/                 # Sign-in / sign-up / verify
+│   ├── actions/*.ts            # Server actions — one file per domain (tenants, leases,
+│   │                           #   maintenance, rent, insurance, communications, etc.)
+│   ├── api/
+│   │   └── webhooks/
+│   │       └── retell/[landlordId]/route.ts   # Inbound SMS webhook (Sprint 13b)
+│   ├── dashboard/              # Every protected page lives under here
+│   │   ├── layout.tsx          # Sidebar + mobile nav drawer + auth enforcement
+│   │   ├── page.tsx            # Overview (stat cards + upcoming events feed)
+│   │   ├── properties/         # Property list, detail, new, edit + unit nesting
+│   │   ├── tenants/            # Tenant CRUD + lease nesting + comms + SMS identities
+│   │   ├── rent/               # Rent schedules + simulate button + mark-paid
+│   │   ├── maintenance/        # Maintenance requests (urgency, status, photos, comms)
+│   │   ├── prospects/          # Pipeline CRM with stage buttons
+│   │   ├── listings/           # Public-facing landing pages for vacancies
+│   │   ├── renewals/           # Leases expiring soon + tenant-notice tracking
+│   │   ├── financials/         # YTD P&L, expenses, income, Schedule E CSV, tax PDF
+│   │   ├── insurance/          # Policies + property junction
+│   │   ├── team/               # Vendor directory
+│   │   ├── compliance/         # State rent rules reference
+│   │   ├── inbox/              # Triage queue for unresolved inbound SMS
+│   │   └── settings/sms/       # Support-line provisioning
+│   ├── lib/
+│   │   ├── format.ts           # Shared formatCurrency / formatDate
+│   │   ├── now.ts              # Purity-lint-friendly Date.now() wrapper
+│   │   ├── phone.ts            # libphonenumber-js E.164 normalization
+│   │   ├── rent-schedule-status.ts   # Pure status computation (unit-tested)
+│   │   ├── queries/*.ts        # RLS-scoped Server Component data loaders
+│   │   ├── schemas/*.ts        # Zod schemas + TS types for every domain
+│   │   ├── sms/                # Retell/Twilio/Resend adapters (stubbed), HMAC verify
+│   │   └── storage/            # Supabase Storage path builders + media downloader
+│   └── ui/                     # Shared React components
+├── lib/supabase/
+│   ├── server.ts               # SSR client
+│   ├── client.ts               # Browser client
+│   ├── proxy-client.ts         # Used by proxy.ts for optimistic session refresh
+│   ├── service-role.ts         # RLS-bypass client (webhook only — never imported client-side)
+│   └── get-user.ts             # Safe auth probe for layouts
 ├── db/
-│   └── schema.sql              # Initial Postgres schema + RLS policies
-├── proxy.ts                    # Next 16 proxy (was middleware) — optimistic auth + session refresh
-├── AGENTS.md                   # Next 16 agent instructions (read docs before coding)
-├── CLAUDE.md                   # Claude Code project instructions
-└── .env.local.example          # Environment variable template
+│   ├── schema.sql              # Canonical Postgres schema. Keep in sync with migrations.
+│   └── migrations/             # One file per migration, dated. Applied manually via Supabase SQL editor.
+├── test/                       # Vitest pure-function tests
+├── docs/
+│   └── SPRINT-13-NEEDS.md      # External-dep checklist for Sprint 13 activation
+├── proxy.ts                    # Next 16 proxy (middleware) — optimistic session refresh only
+└── .env.local.example
 ```
+
+## Developer crash course
+
+### Conventions in 90 seconds
+
+- **Auth**: the `proxy.ts` does an *optimistic* session refresh only. Real auth enforcement happens inside `app/dashboard/layout.tsx` via `getUser()` + `redirect('/sign-in')`. Never rely on the proxy for auth.
+- **Queries**: every read lives in `app/lib/queries/<domain>.ts`, takes no auth arg, and relies on RLS to scope to the current user. Server Components call them directly.
+- **Mutations**: every write is a Server Action in `app/actions/<domain>.ts`, returns the `ActionState` union (`{success:true} | {success:false,errors:{...}} | {success:false,message:string}`), and (for destructive actions) explicitly re-checks `auth.getUser()` plus adds `.eq('owner_id', user.id)` as defense in depth.
+- **Schemas**: `app/lib/schemas/<domain>.ts` owns both the Zod validators and the hand-written TS row types. There are no generated Supabase types — we use `as any` on rows locally to avoid `never`-inference.
+- **UI**: `app/ui/*.tsx` for shared components. Server components by default; `'use client'` only when you need hooks, local state, or handlers.
+- **Forms**: every form uses React 19's `useActionState` with the signature above. The inline form pattern (see `log-communication-form.tsx`) clears itself on success.
+- **Logs**: the `communications` table is polymorphic by `(entity_type, entity_id)`. Any CRM-like entity can have a timeline via `<CommunicationsTimeline entityType="tenant" entityId={...} />`.
+
+### Adding a DB table — the whole ritual
+
+1. Write `db/migrations/YYYY_MM_DD_<name>.sql` with: enums, CREATE TABLE, indexes, `alter table … enable row level security`, CREATE POLICY × N (select/insert/update/delete), trigger for `updated_at`.
+2. Mirror every line into `db/schema.sql` (this is the canonical reference — the migrations directory is the change log).
+3. Apply the migration manually through the Supabase SQL Editor. There's no automated migrator yet.
+4. Add `app/lib/schemas/<domain>.ts`, `app/lib/queries/<domain>.ts`, `app/actions/<domain>.ts` following the pattern used by, e.g., `insurance`.
+5. If the domain has a user-visible page, add `app/dashboard/<domain>/` (list + new + `[id]` + `[id]/edit` + `loading.tsx` + `error.tsx`).
+6. Add the nav entry to `NAV_ITEMS` in `app/dashboard/layout.tsx` if it gets a sidebar link.
+
+### What "ships green" means
+
+- `npx tsc --noEmit` passes
+- `npm run lint` passes
+- `npm test` — 27 unit tests in `test/`, all pass
+- `npm run build` — full Next build succeeds
+
+Run all four before committing anything non-trivial.
+
+### Demo seed
+
+The dashboard has a **Demo data** card. Click **Load demo data** to populate a realistic 2-property portfolio (duplex + single-family) with units, tenants, leases, payments, maintenance, prospects, expenses, team members, insurance policies, listings, and communications. Click **Remove demo data** to clean it all out. Real data is never touched — demo rows are tagged with `[DEMO]` in their `notes` column.
+
+### External integrations currently stubbed
+
+As of Sprint 13, these are scaffolded but use fake data. See `docs/SPRINT-13-NEEDS.md` for activation steps.
+
+| Area | Status | What's missing |
+|---|---|---|
+| Stripe Connect | Scaffolded, not wired | LLC + business bank account + Stripe onboarding |
+| Resend email | Stubbed | Verified sending domain + `RESEND_API_KEY` |
+| Retell AI (SMS) | Stubbed | `RETELL_API_KEY` + webhook payload verification |
+| Twilio (MMS media) | Stubbed | Per-landlord Twilio credentials |
+| A2P 10DLC | Not needed for testing | Only matters when scaling past sandbox volumes |
 
 ## Sprint plan
 
