@@ -225,6 +225,22 @@ export default async function PublicListingPage({
                 <InquiryForm slug={listing.slug} turnstileSiteKey={siteKey} />
               </div>
             </div>
+            <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-5 text-center">
+              <p className="text-sm font-medium text-indigo-900">
+                Ready to apply?
+              </p>
+              <p className="mt-1 text-xs text-indigo-800">
+                Skip the back-and-forth — fill out the rental application
+                directly. There&rsquo;s a built-in helper to answer common
+                questions.
+              </p>
+              <a
+                href={`/apply/${listing.slug}`}
+                className="mt-3 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                Apply now →
+              </a>
+            </div>
           </aside>
         </div>
       </main>
