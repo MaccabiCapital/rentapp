@@ -133,7 +133,15 @@ export default async function RentPage() {
             )}
           </p>
         </div>
-        <SimulateRentButton />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/rent/import"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+          >
+            Import leases
+          </Link>
+          <SimulateRentButton />
+        </div>
       </div>
 
       <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

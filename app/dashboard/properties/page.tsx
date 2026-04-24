@@ -40,12 +40,20 @@ export default async function PropertiesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-zinc-900">Properties</h1>
-        <Link
-          href="/dashboard/properties/new"
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        >
-          Add property
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/properties/import"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+          >
+            Import CSV
+          </Link>
+          <Link
+            href="/dashboard/properties/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
+            Add property
+          </Link>
+        </div>
       </div>
 
       {properties.length === 0 ? (
