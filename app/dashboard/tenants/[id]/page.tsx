@@ -10,6 +10,7 @@ import { LeaseStatusBadge } from '@/app/ui/lease-status-badge'
 import { DeleteTenantButton } from '@/app/ui/delete-tenant-button'
 import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 import { TenantSmsIdentitiesCard } from '@/app/ui/tenant-sms-identities-card'
+import { TenantPortalCard } from '@/app/ui/tenant-portal-card'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -133,6 +134,17 @@ export default async function TenantDetailPage({
           </table>
         </div>
       )}
+
+      <div className="mt-6">
+        <TenantPortalCard
+          tenantId={tenant.id}
+          token={(tenant as unknown as { portal_token?: string | null }).portal_token ?? null}
+          generatedAt={
+            (tenant as unknown as { portal_token_generated_at?: string | null })
+              .portal_token_generated_at ?? null
+          }
+        />
+      </div>
 
       <TenantSmsIdentitiesCard tenantId={tenant.id} />
 
