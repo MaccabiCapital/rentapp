@@ -6,13 +6,18 @@
 //   {owner_id}/units/{unit_id}/{photo_id}.{ext}
 //   {owner_id}/maintenance/{request_id}/{photo_id}.{ext}
 //   {owner_id}/properties/{property_id}/{photo_id}.{ext}
+//   {owner_id}/inspection_items/{item_id}/{photo_id}.{ext}
 //
 // The owner_id prefix is critical — it's what the Storage RLS
 // policies check against auth.uid().
 
 import { createServerClient } from '@/lib/supabase/server'
 
-export type PhotoEntityType = 'units' | 'maintenance' | 'properties'
+export type PhotoEntityType =
+  | 'units'
+  | 'maintenance'
+  | 'properties'
+  | 'inspection_items'
 
 export const PHOTO_BUCKET = 'rentapp-photos'
 

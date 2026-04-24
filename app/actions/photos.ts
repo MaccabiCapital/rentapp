@@ -28,6 +28,7 @@ const ENTITY_TABLES: Record<PhotoEntityType, string> = {
   units: 'units',
   maintenance: 'maintenance_requests',
   properties: 'properties',
+  inspection_items: 'inspection_items',
 }
 
 // Revalidate paths per entity type so the UI refreshes after
@@ -37,6 +38,7 @@ function revalidateForEntity(
   entityType: PhotoEntityType,
   entityId: string,
   propertyId: string | null,
+  parentId: string | null = null,
 ) {
   revalidatePath('/dashboard')
   if (entityType === 'properties') {
@@ -51,17 +53,24 @@ function revalidateForEntity(
   } else if (entityType === 'maintenance') {
     revalidatePath('/dashboard/maintenance')
     revalidatePath(`/dashboard/maintenance/${entityId}`)
+  } else if (entityType === 'inspection_items') {
+    revalidatePath('/dashboard/inspections')
+    if (parentId) {
+      revalidatePath(`/dashboard/inspections/${parentId}`)
+    }
   }
 }
 
 // Load the entity row and return its current photos[] + property_id
-// (for revalidation paths).
+// (for revalidation paths) + parent_id (inspection_items → parent
+// inspection, used for revalidation of the detail page).
 async function loadEntity(
   entityType: PhotoEntityType,
   entityId: string,
 ): Promise<{
   photos: string[]
   property_id: string | null
+  parent_id: string | null
 } | null> {
   const supabase = await createServerClient()
   const table = ENTITY_TABLES[entityType]
@@ -70,7 +79,9 @@ async function loadEntity(
       ? 'photos, property_id'
       : entityType === 'maintenance'
         ? 'photos, unit_id'
-        : 'photos'
+        : entityType === 'inspection_items'
+          ? 'photos, inspection_id'
+          : 'photos'
   const { data, error } = await supabase
     .from(table)
     .select(selectCols)
@@ -80,6 +91,7 @@ async function loadEntity(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const row = data as any
   let propertyId: string | null = null
+  let parentId: string | null = null
   if (entityType === 'units') {
     propertyId = row.property_id ?? null
   } else if (entityType === 'maintenance') {
@@ -93,10 +105,13 @@ async function loadEntity(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       propertyId = (unit as any)?.property_id ?? null
     }
+  } else if (entityType === 'inspection_items') {
+    parentId = row.inspection_id ?? null
   }
   return {
     photos: row.photos ?? [],
     property_id: propertyId,
+    parent_id: parentId,
   }
 }
 
@@ -167,7 +182,7 @@ export async function uploadPhoto(
     }
   }
 
-  revalidateForEntity(entityType, entityId, entity.property_id)
+  revalidateForEntity(entityType, entityId, entity.property_id, entity.parent_id)
   return { success: true }
 }
 
@@ -210,6 +225,6 @@ export async function deletePhoto(
     }
   }
 
-  revalidateForEntity(entityType, entityId, entity.property_id)
+  revalidateForEntity(entityType, entityId, entity.property_id, entity.parent_id)
   return { success: true }
 }
