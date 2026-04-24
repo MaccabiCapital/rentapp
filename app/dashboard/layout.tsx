@@ -4,22 +4,67 @@ import { getUser } from '@/lib/supabase/get-user'
 import { signOut } from '@/app/actions/auth'
 import { getTriageCount } from '@/app/lib/queries/communications'
 
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Overview', icon: '◆' },
-  { href: '/dashboard/inbox', label: 'Inbox', icon: '✉', badge: 'inbox' },
-  { href: '/dashboard/properties', label: 'Properties', icon: '▦' },
-  { href: '/dashboard/tenants', label: 'Tenants', icon: '◉' },
-  { href: '/dashboard/rent', label: 'Rent', icon: '$' },
-  { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
-  { href: '/dashboard/prospects', label: 'Prospects', icon: '→' },
-  { href: '/dashboard/listings', label: 'Listings', icon: '◎' },
-  { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
-  { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
-  { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
-  { href: '/dashboard/team', label: 'My Team', icon: '◈' },
-  { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
-  { href: '/dashboard/settings', label: 'Settings', icon: '⚐' },
-] as const
+type NavItem = {
+  href: string
+  label: string
+  icon: string
+  badge?: 'inbox'
+}
+
+type NavGroup = {
+  heading?: string
+  items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { href: '/dashboard', label: 'Overview', icon: '◆' },
+      { href: '/dashboard/inbox', label: 'Inbox', icon: '✉', badge: 'inbox' },
+      { href: '/dashboard/workflows', label: 'Workflows', icon: '⟶' },
+    ],
+  },
+  {
+    heading: 'Units',
+    items: [
+      { href: '/dashboard/properties', label: 'Properties', icon: '▦' },
+      { href: '/dashboard/listings', label: 'Listings', icon: '◎' },
+      { href: '/dashboard/inspections', label: 'Inspections', icon: '☐' },
+      { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
+      { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
+    ],
+  },
+  {
+    heading: 'Tenants',
+    items: [
+      { href: '/dashboard/tenants', label: 'Tenants', icon: '◉' },
+      { href: '/dashboard/prospects', label: 'Prospects', icon: '→' },
+      {
+        href: '/dashboard/leasing-assistant',
+        label: 'Leasing assistant',
+        icon: '✦',
+      },
+      { href: '/dashboard/rent', label: 'Rent', icon: '$' },
+      { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
+      {
+        href: '/dashboard/renters-insurance',
+        label: 'Renters insurance',
+        icon: '◐',
+      },
+      { href: '/dashboard/notices', label: 'Notices', icon: '⚖' },
+    ],
+  },
+  {
+    heading: 'Operations',
+    items: [
+      { href: '/dashboard/reports', label: 'Reports', icon: '📊' },
+      { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
+      { href: '/dashboard/team', label: 'My Team', icon: '◈' },
+      { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
+      { href: '/dashboard/settings', label: 'Settings', icon: '⚐' },
+    ],
+  },
+]
 
 export default async function DashboardLayout({
   children,
@@ -47,6 +92,36 @@ export default async function DashboardLayout({
   const displayName =
     (user.user_metadata?.full_name as string | undefined) ?? user.email ?? ''
 
+  function renderNavGroups(linkClass: string) {
+    return NAV_GROUPS.map((group, gi) => (
+      <div key={gi} className={gi === 0 ? '' : 'pt-4'}>
+        {group.heading && (
+          <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {group.heading}
+          </div>
+        )}
+        <div className="space-y-1">
+          {group.items.map((item) => (
+            <Link key={item.href} href={item.href} className={linkClass}>
+              <span className="w-4 text-center text-slate-400">
+                {item.icon}
+              </span>
+              <span className="flex-1">{item.label}</span>
+              {item.badge === 'inbox' && inboxCount > 0 && (
+                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                  {inboxCount > 99 ? '99+' : inboxCount}
+                </span>
+              )}
+            </Link>
+          ))}
+        </div>
+      </div>
+    ))
+  }
+
+  const navLinkClass =
+    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+
   return (
     <div className="flex min-h-full flex-1">
       {/* Sidebar */}
@@ -57,24 +132,8 @@ export default async function DashboardLayout({
             Rentapp
           </span>
         </div>
-        <nav className="flex-1 space-y-1 p-4">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-            >
-              <span className="w-4 text-center text-slate-400">
-                {item.icon}
-              </span>
-              <span className="flex-1">{item.label}</span>
-              {'badge' in item && item.badge === 'inbox' && inboxCount > 0 && (
-                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
-                  {inboxCount > 99 ? '99+' : inboxCount}
-                </span>
-              )}
-            </Link>
-          ))}
+        <nav className="flex-1 overflow-y-auto p-4">
+          {renderNavGroups(navLinkClass)}
         </nav>
         <div className="border-t border-slate-200 p-4">
           <div className="mb-2 truncate text-xs text-slate-500">
@@ -130,25 +189,9 @@ export default async function DashboardLayout({
               </div>
               <span className="text-xs text-slate-500">{displayName}</span>
             </summary>
-            <nav className="space-y-1 border-t border-slate-200 p-4">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-                >
-                  <span className="w-4 text-center text-slate-400">
-                    {item.icon}
-                  </span>
-                  <span className="flex-1">{item.label}</span>
-                  {'badge' in item && item.badge === 'inbox' && inboxCount > 0 && (
-                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
-                      {inboxCount > 99 ? '99+' : inboxCount}
-                    </span>
-                  )}
-                </Link>
-              ))}
-              <form action={signOut} className="pt-2">
+            <nav className="border-t border-slate-200 p-4">
+              {renderNavGroups(navLinkClass)}
+              <form action={signOut} className="pt-4">
                 <button
                   type="submit"
                   className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
