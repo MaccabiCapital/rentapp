@@ -132,3 +132,87 @@ export async function rotateWebhookSecret(): Promise<ActionState> {
       'Secret rotation is disabled until the Retell update-agent API is wired in — see SPRINT-13-NEEDS.md.',
   }
 }
+
+// ------------------------------------------------------------
+// Leasing (prospect-facing) line — same Retell/Twilio stack,
+// different webhook branch (creates prospects instead of
+// maintenance requests).
+// ------------------------------------------------------------
+
+export async function provisionLeasingLine(): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
+
+  const { data: existing } = await supabase
+    .from('landlord_phone_lines')
+    .select('id')
+    .eq('line_type', 'leasing')
+    .maybeSingle()
+  if (existing) {
+    return {
+      success: false,
+      message: 'You already have a leasing line set up.',
+    }
+  }
+
+  const landlordName =
+    (user.user_metadata?.full_name as string | undefined) ?? 'your landlord'
+  const webhookSecret = generateWebhookSecret()
+  const webhookUrl = `${getBaseUrl()}/api/webhooks/retell/${user.id}`
+
+  // Stubbed — same as support line. When Retell account is live,
+  // this creates a leasing-oriented chat agent with a different
+  // system prompt (covers unit details, viewings, application URL)
+  // and auto-creates prospects on call completion instead of
+  // maintenance requests.
+  const { agent_id } = await createSupportAgent({
+    landlordName,
+    webhookUrl,
+    webhookSecret,
+  })
+  const { phone_number } = await provisionPhoneNumber({})
+
+  const { error } = await supabase.from('landlord_phone_lines').insert({
+    owner_id: user.id,
+    line_type: 'leasing',
+    twilio_number: phone_number,
+    retell_agent_id: agent_id,
+    retell_webhook_secret: webhookSecret,
+    status: 'active',
+  })
+  if (error) {
+    return {
+      success: false,
+      message: `Could not save the leasing line: ${error.message}`,
+    }
+  }
+
+  revalidatePath('/dashboard/settings/sms')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function suspendLeasingLine(): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
+  const { error } = await supabase
+    .from('landlord_phone_lines')
+    .update({ status: 'suspended' })
+    .eq('owner_id', user.id)
+    .eq('line_type', 'leasing')
+  if (error) {
+    return { success: false, message: `Could not suspend: ${error.message}` }
+  }
+  revalidatePath('/dashboard/settings/sms')
+  return { success: true }
+}
