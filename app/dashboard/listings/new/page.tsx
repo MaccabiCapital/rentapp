@@ -6,10 +6,16 @@ import { ListingForm } from '@/app/ui/listing-form'
 export default async function NewListingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ property?: string; unit?: string }>
+  searchParams: Promise<{
+    property?: string
+    unit?: string
+    unitId?: string
+    propertyId?: string
+  }>
 }) {
-  const { property: preselectedProperty, unit: preselectedUnit } =
-    await searchParams
+  const params = await searchParams
+  const preselectedProperty = params.propertyId ?? params.property
+  const preselectedUnit = params.unitId ?? params.unit
   const propertyOptions = await getPropertiesWithUnitsForListingForm()
 
   return (

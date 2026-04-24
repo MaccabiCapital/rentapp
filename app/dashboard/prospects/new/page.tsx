@@ -6,9 +6,10 @@ import { ProspectForm } from '@/app/ui/prospect-form'
 export default async function NewProspectPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unit?: string }>
+  searchParams: Promise<{ unit?: string; unitId?: string }>
 }) {
-  const { unit: preselectedUnit } = await searchParams
+  const params = await searchParams
+  const preselectedUnit = params.unitId ?? params.unit
   const units = await getAllUnitsWithProperty()
 
   const unitOptions = units.map((u) => ({
