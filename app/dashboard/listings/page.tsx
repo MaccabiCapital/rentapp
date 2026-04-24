@@ -4,6 +4,8 @@
 
 import Link from 'next/link'
 import { getListingsByOwner } from '@/app/lib/queries/listings'
+import { getSyndicationFeedSettings } from '@/app/actions/syndication'
+import { SyndicationFeedCard } from '@/app/ui/syndication-feed-card'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -24,7 +26,10 @@ function formatDate(value: string | null) {
 }
 
 export default async function ListingsPage() {
-  const listings = await getListingsByOwner()
+  const [listings, feedSettings] = await Promise.all([
+    getListingsByOwner(),
+    getSyndicationFeedSettings(),
+  ])
 
   const active = listings.filter((l) => l.is_active)
   const inactive = listings.filter((l) => !l.is_active)
@@ -46,6 +51,11 @@ export default async function ListingsPage() {
           Create listing
         </Link>
       </div>
+
+      <SyndicationFeedCard
+        token={feedSettings.token}
+        generatedAt={feedSettings.generatedAt}
+      />
 
       {listings.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-12 text-center">
