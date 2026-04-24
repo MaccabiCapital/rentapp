@@ -13,16 +13,48 @@ import { getDashboardSummary } from '@/app/lib/queries/dashboard-summary'
 import { hasDemoData } from '@/app/lib/queries/demo-status'
 import { getUpcomingEvents } from '@/app/lib/queries/upcoming-events'
 import { getInsuranceSummary } from '@/app/lib/queries/insurance'
+import { getInspectionSummary } from '@/app/lib/queries/inspections'
+import { getNoticeSummary } from '@/app/lib/queries/notices'
+import { getRentersInsuranceSummary } from '@/app/lib/queries/renters-insurance'
+import { getLeasingSummary } from '@/app/lib/queries/leasing'
+import { getActionItems } from '@/app/lib/queries/action-items'
 import { DemoSeedButton } from '@/app/ui/demo-seed-button'
 import { UpcomingEvents } from '@/app/ui/upcoming-events'
+import { ActionItemsPanel } from '@/app/ui/action-items-panel'
+
+// Safely resolve a summary query — returns null if the underlying
+// table doesn't exist yet (fresh deploy before migrations).
+async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn()
+  } catch {
+    return null
+  }
+}
 
 export default async function DashboardHome() {
-  const [user, summary, demoLoaded, events, insurance] = await Promise.all([
+  const [
+    user,
+    summary,
+    demoLoaded,
+    events,
+    insurance,
+    inspections,
+    notices,
+    rentersInsurance,
+    leasing,
+    actionItems,
+  ] = await Promise.all([
     getUser(),
     getDashboardSummary(),
     hasDemoData(),
     getUpcomingEvents(),
     getInsuranceSummary(),
+    safe(getInspectionSummary),
+    safe(getNoticeSummary),
+    safe(getRentersInsuranceSummary),
+    safe(getLeasingSummary),
+    safe(getActionItems),
   ])
 
   const displayName =
@@ -45,9 +77,41 @@ export default async function DashboardHome() {
         </p>
       </div>
 
+      {isEmpty && (
+        <div className="mb-10 rounded-lg border-2 border-indigo-300 bg-indigo-50/80 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl leading-none">🚀</div>
+            <div className="flex-1">
+              <h2 className="text-base font-semibold text-indigo-900">
+                Start here: First-time setup wizard
+              </h2>
+              <p className="mt-1 text-sm text-indigo-900">
+                Four steps to a working portfolio: a property, a unit, a
+                tenant, a lease. Everything else in the app turns on once
+                those exist.
+              </p>
+              <div className="mt-3">
+                <Link
+                  href="/dashboard/workflows/first-setup"
+                  className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+                >
+                  Open setup wizard →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isEmpty && events.length > 0 && (
         <div className="mb-10">
           <UpcomingEvents events={events} />
+        </div>
+      )}
+
+      {!isEmpty && actionItems && (
+        <div className="mb-10">
+          <ActionItemsPanel items={actionItems} />
         </div>
       )}
 
@@ -112,6 +176,69 @@ export default async function DashboardHome() {
                     : 'default'
               }
               href="/dashboard/insurance"
+            />
+          )}
+          {inspections && inspections.total > 0 && (
+            <StatCard
+              label="Inspections"
+              value={inspections.total}
+              subLabel={
+                inspections.drafts > 0
+                  ? `${inspections.drafts} in progress`
+                  : inspections.awaitingSignature > 0
+                    ? `${inspections.awaitingSignature} awaiting signature`
+                    : 'All complete'
+              }
+              tone={inspections.drafts > 0 ? 'warning' : 'default'}
+              href="/dashboard/inspections"
+            />
+          )}
+          {notices && notices.unserved > 0 && (
+            <StatCard
+              label="Notices"
+              value={notices.unserved}
+              subLabel={`${notices.total} total · ${notices.unserved} not yet served`}
+              tone="warning"
+              href="/dashboard/notices"
+            />
+          )}
+          {rentersInsurance &&
+            (rentersInsurance.leasesRequiringWithoutPolicy > 0 ||
+              rentersInsurance.total > 0) && (
+              <StatCard
+                label="Renters insurance"
+                value={
+                  rentersInsurance.leasesRequiringWithoutPolicy > 0
+                    ? rentersInsurance.leasesRequiringWithoutPolicy
+                    : rentersInsurance.total
+                }
+                subLabel={
+                  rentersInsurance.leasesRequiringWithoutPolicy > 0
+                    ? `tenant${rentersInsurance.leasesRequiringWithoutPolicy === 1 ? '' : 's'} missing a policy`
+                    : rentersInsurance.expired > 0
+                      ? `${rentersInsurance.expired} expired`
+                      : rentersInsurance.expiringSoon > 0
+                        ? `${rentersInsurance.expiringSoon} expiring in 30d`
+                        : 'All on file'
+                }
+                tone={
+                  rentersInsurance.leasesRequiringWithoutPolicy > 0 ||
+                  rentersInsurance.expired > 0
+                    ? 'danger'
+                    : rentersInsurance.expiringSoon > 0
+                      ? 'warning'
+                      : 'default'
+                }
+                href="/dashboard/renters-insurance"
+              />
+            )}
+          {leasing && leasing.total > 0 && (
+            <StatCard
+              label="Leasing drafts"
+              value={leasing.pendingDrafts}
+              subLabel={`${leasing.active} active conversation${leasing.active === 1 ? '' : 's'}`}
+              tone={leasing.pendingDrafts > 0 ? 'warning' : 'default'}
+              href="/dashboard/leasing-assistant"
             />
           )}
         </div>
