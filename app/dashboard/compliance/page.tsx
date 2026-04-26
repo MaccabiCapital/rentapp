@@ -11,14 +11,23 @@ import {
   getAllStateRules,
   getStatesInPortfolio,
 } from '@/app/lib/queries/state-rules'
+import {
+  listFindings,
+  countOpenFindingsBySeverity,
+} from '@/app/lib/queries/compliance'
 import { ComplianceDisclaimer } from '@/app/ui/compliance-disclaimer'
 import { StateRuleCard } from '@/app/ui/state-rule-card'
+import { ListingCopyScanner } from '@/app/ui/listing-copy-scanner'
+import { ComplianceFindingRow } from '@/app/ui/compliance-finding-row'
 
 export default async function CompliancePage() {
-  const [allRules, portfolioStates] = await Promise.all([
-    getAllStateRules(),
-    getStatesInPortfolio(),
-  ])
+  const [allRules, portfolioStates, openFindings, findingsCounts] =
+    await Promise.all([
+      getAllStateRules(),
+      getStatesInPortfolio(),
+      listFindings({ status: 'open', limit: 50 }),
+      countOpenFindingsBySeverity(),
+    ])
 
   const portfolioSet = new Set(portfolioStates)
   const myStatesRules = allRules.filter((r) => portfolioSet.has(r.state))
@@ -42,6 +51,55 @@ export default async function CompliancePage() {
       <div className="mb-8">
         <ComplianceDisclaimer />
       </div>
+
+      {/* Open findings tile */}
+      <section className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+          Open compliance findings
+        </h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <SummaryCard
+            label="Material legal exposure"
+            value={`${findingsCounts.red}`}
+            sub="must address"
+            tone="red"
+          />
+          <SummaryCard
+            label="Review recommended"
+            value={`${findingsCounts.amber}`}
+            sub="to review"
+            tone="amber"
+          />
+          <SummaryCard
+            label="Informational"
+            value={`${findingsCounts.info}`}
+            sub="awareness only"
+            tone="blue"
+          />
+        </div>
+      </section>
+
+      {/* Listing copy scanner */}
+      <section className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+          Listing copy scanner
+        </h2>
+        <ListingCopyScanner />
+      </section>
+
+      {/* Open findings list */}
+      {openFindings.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+            Recent open findings ({openFindings.length})
+          </h2>
+          <div className="space-y-2">
+            {openFindings.map((f) => (
+              <ComplianceFindingRow key={f.id} finding={f} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mb-10">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
@@ -101,6 +159,8 @@ export default async function CompliancePage() {
         </section>
       )}
 
+      {/* Helper card for SummaryCard component (defined below) */}
+
       {unresearched.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
@@ -128,6 +188,34 @@ export default async function CompliancePage() {
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function SummaryCard({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string
+  value: string
+  sub: string
+  tone: 'red' | 'amber' | 'blue'
+}) {
+  const toneClass =
+    tone === 'red'
+      ? 'border-red-200 bg-red-50'
+      : tone === 'amber'
+        ? 'border-amber-200 bg-amber-50'
+        : 'border-blue-200 bg-blue-50'
+  return (
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
+      <div className="text-xs font-medium uppercase tracking-wide text-zinc-600">
+        {label}
+      </div>
+      <div className="mt-1 text-2xl font-semibold text-zinc-900">{value}</div>
+      <div className="mt-0.5 text-xs text-zinc-500">{sub}</div>
     </div>
   )
 }
