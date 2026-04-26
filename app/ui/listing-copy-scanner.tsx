@@ -21,6 +21,7 @@ const JURISDICTION_OPTIONS: Array<{ code: string; name: string }> = [
   { code: 'US', name: 'Federal only (US)' },
   { code: 'CA', name: 'California' },
   { code: 'NY', name: 'New York' },
+  { code: 'MI', name: 'Michigan' },
   { code: 'TX', name: 'Texas' },
   { code: 'FL', name: 'Florida' },
   { code: 'WA', name: 'Washington' },

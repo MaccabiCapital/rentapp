@@ -5,18 +5,20 @@
 // loadRulePack(jurisdiction) returns the federal baseline merged
 // with state add-ons. Throws if the jurisdiction isn't supported.
 //
-// Currently supported: US (federal only — bare minimum), CA, NY.
-// Other MVP states (TX, FL, WA) defer to federal baseline only
-// for v1; their rule files come in a follow-up commit.
+// Currently with state-specific rules: CA, NY, MI.
+// Federal-baseline-only fallback: TX, FL, WA (rule files in a
+// follow-up commit).
 
 import type { RulePack, ListingScanRule } from './_types'
 import { FEDERAL_LISTING_RULES } from './_federal'
 import { CALIFORNIA_LISTING_RULES } from './ca'
 import { NEW_YORK_LISTING_RULES } from './ny'
+import { MICHIGAN_LISTING_RULES } from './mi'
 
 const STATE_LISTING_RULES: Record<string, ListingScanRule[]> = {
   CA: CALIFORNIA_LISTING_RULES,
   NY: NEW_YORK_LISTING_RULES,
+  MI: MICHIGAN_LISTING_RULES,
   // TX, FL, WA: federal baseline only for v1
   TX: [],
   FL: [],
@@ -27,6 +29,7 @@ const JURISDICTION_NAMES: Record<string, string> = {
   US: 'United States (federal)',
   CA: 'California',
   NY: 'New York',
+  MI: 'Michigan',
   TX: 'Texas',
   FL: 'Florida',
   WA: 'Washington',
@@ -38,7 +41,7 @@ export function loadRulePack(jurisdiction: string): RulePack {
 
   if (code !== 'US' && stateRules === null) {
     throw new Error(
-      `Unsupported jurisdiction: ${jurisdiction}. Supported: US, CA, NY, TX, FL, WA.`,
+      `Unsupported jurisdiction: ${jurisdiction}. Supported: US, CA, NY, MI, TX, FL, WA.`,
     )
   }
 
