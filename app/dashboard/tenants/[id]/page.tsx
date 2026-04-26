@@ -11,6 +11,7 @@ import { DeleteTenantButton } from '@/app/ui/delete-tenant-button'
 import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
 import { TenantSmsIdentitiesCard } from '@/app/ui/tenant-sms-identities-card'
 import { TenantPortalCard } from '@/app/ui/tenant-portal-card'
+import { TenantForwardingCard } from '@/app/ui/tenant-forwarding-card'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -145,6 +146,30 @@ export default async function TenantDetailPage({
           }
         />
       </div>
+
+      <TenantForwardingCard
+        tenantId={tenant.id}
+        initial={{
+          forwarding_street_address:
+            (tenant as unknown as { forwarding_street_address?: string | null })
+              .forwarding_street_address ?? null,
+          forwarding_unit:
+            (tenant as unknown as { forwarding_unit?: string | null })
+              .forwarding_unit ?? null,
+          forwarding_city:
+            (tenant as unknown as { forwarding_city?: string | null })
+              .forwarding_city ?? null,
+          forwarding_state:
+            (tenant as unknown as { forwarding_state?: string | null })
+              .forwarding_state ?? null,
+          forwarding_postal_code:
+            (tenant as unknown as { forwarding_postal_code?: string | null })
+              .forwarding_postal_code ?? null,
+          forwarding_captured_at:
+            (tenant as unknown as { forwarding_captured_at?: string | null })
+              .forwarding_captured_at ?? null,
+        }}
+      />
 
       <TenantSmsIdentitiesCard tenantId={tenant.id} />
 

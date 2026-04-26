@@ -16,6 +16,7 @@ import {
   nextLeaseForUnit,
   getLeasesForWorkflowPicker,
 } from '@/app/lib/queries/workflow-context'
+import { getSettlementForLease } from '@/app/lib/queries/security-deposits'
 import { WorkflowStepCard } from '@/app/ui/workflow-step-card'
 import { WorkflowLeasePicker } from '@/app/ui/workflow-lease-picker'
 import { TurnoverDecisionPrompt } from '@/app/ui/turnover-decision-prompt'
@@ -65,6 +66,7 @@ export default async function OffboardTenantWorkflow({
     moveOutInfoNotice,
     activeListing,
     nextLease,
+    depositSettlement,
   ] = await Promise.all([
     latestInspectionForLease(leaseId, 'move_in'),
     latestInspectionForLease(leaseId, 'move_out'),
@@ -73,6 +75,7 @@ export default async function OffboardTenantWorkflow({
     latestNoticeForLease(leaseId, 'move_out_info'),
     lease.unit?.id ? activeListingForUnit(lease.unit.id) : null,
     lease.unit?.id ? nextLeaseForUnit(lease.unit.id, leaseId) : null,
+    getSettlementForLease(leaseId),
   ])
 
   const tenantName = lease.tenant
@@ -267,13 +270,44 @@ export default async function OffboardTenantWorkflow({
 
         <WorkflowStepCard
           stepNumber={6}
-          title="Security deposit return"
-          description={`Within your state's required window${lease.unit?.property?.state ? ` (${lease.unit.property.state})` : ''}, send the tenant an itemized accounting of any deductions and return the balance. The compliance page has your state's deadline.`}
-          status="ready"
-          actionHref={`/dashboard/compliance`}
-          actionLabel="Check state deadline"
-          secondaryHref={`/dashboard/notices/new?leaseId=${leaseId}&type=entry`}
-          secondaryLabel="Draft a deductions letter (uses the notice template)"
+          title="Security deposit accounting"
+          description={
+            depositSettlement?.status === 'mailed'
+              ? `Itemized deposit accounting was generated and mailed${depositSettlement.mailed_at ? ` on ${formatDate(depositSettlement.mailed_at.slice(0, 10))}` : ''}.`
+              : depositSettlement?.status === 'finalized'
+                ? `Letter is finalized — print it, mail it (certified is safest), then come back and mark it as mailed. Legal deadline: ${depositSettlement.legal_deadline_date ? formatDate(depositSettlement.legal_deadline_date) : 'not yet computed'}.`
+                : depositSettlement?.status === 'draft'
+                  ? `A draft is in progress. Pre-filled damage deductions from the move-out comparison; review amounts, add forwarding address, then finalize.`
+                  : `Within your state's required window${lease.unit?.property?.state ? ` (${lease.unit.property.state})` : ''}, generate the itemized deposit accounting. Damage deductions are pre-filled from the move-in vs move-out inspection comparison.`
+          }
+          status={
+            depositSettlement?.status === 'mailed'
+              ? 'done'
+              : depositSettlement
+                ? 'ready'
+                : moveOutDone
+                  ? 'ready'
+                  : 'blocked'
+          }
+          doneSummary={
+            depositSettlement?.status === 'mailed' && depositSettlement.mailed_at
+              ? `Mailed ${formatDate(depositSettlement.mailed_at.slice(0, 10))}`
+              : undefined
+          }
+          actionHref={
+            depositSettlement
+              ? `/dashboard/security-deposits/${depositSettlement.id}`
+              : `/dashboard/security-deposits/new?leaseId=${leaseId}`
+          }
+          actionLabel={
+            depositSettlement
+              ? depositSettlement.status === 'mailed'
+                ? 'View letter'
+                : depositSettlement.status === 'finalized'
+                  ? 'Mark as mailed'
+                  : 'Continue draft'
+              : 'Generate deposit accounting'
+          }
         />
 
         <WorkflowStepCard

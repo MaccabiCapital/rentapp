@@ -52,6 +52,11 @@ const NAV_GROUPS: NavGroup[] = [
         icon: '◐',
       },
       { href: '/dashboard/notices', label: 'Notices', icon: '⚖' },
+      {
+        href: '/dashboard/security-deposits',
+        label: 'Security deposits',
+        icon: '◈',
+      },
     ],
   },
   {
