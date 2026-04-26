@@ -19,7 +19,9 @@ import { analyzePdfDocument } from './pdf-forensics'
 import { analyzeIncomeConsistency } from './income-consistency'
 import { extractPayStubText } from './text-extractors/pay-stub'
 import { computeRiskBand } from './risk-band'
+import { generateAiSummary } from './ai-summary'
 import type { SignalRow } from './signal-builders'
+import type { ScreeningSignal } from '@/app/lib/schemas/screening'
 import type {
   ScreeningReportStatus,
   ScreeningRiskBand,
@@ -169,11 +171,29 @@ export async function runScreeningEngine(
   const finalStatus: ScreeningReportStatus =
     documentsAnalyzed === 0 && documents.length > 0 ? 'partial' : 'complete'
 
+  // 6.5 — Generate the AI summary (template stub for v1; live API
+  // when ANTHROPIC_API_KEY is set). Always runs through guardrails.
+  // Re-fetch signals with their inserted IDs for the summary input.
+  const { data: signalRows } = await supabase
+    .from('screening_signals')
+    .select('*')
+    .eq('report_id', reportId)
+  const persistedSignals = (signalRows ?? []) as ScreeningSignal[]
+
+  const summaryResult = await generateAiSummary({
+    signals: persistedSignals,
+    riskBand,
+    documentsAnalyzed,
+  })
+
   await supabase
     .from('screening_reports')
     .update({
       status: finalStatus,
       risk_band: riskBand,
+      ai_summary: summaryResult.summary,
+      ai_summary_model: summaryResult.model,
+      ai_summary_generated_at: new Date().toISOString(),
     })
     .eq('id', reportId)
 
@@ -190,6 +210,18 @@ export async function runScreeningEngine(
         risk_band: riskBand,
         status: finalStatus,
         errors: errors.length > 0 ? errors : undefined,
+      },
+      actor_user_id: null,
+      actor_kind: 'system',
+    },
+    {
+      owner_id: report.owner_id,
+      report_id: reportId,
+      prospect_id: report.prospect_id,
+      event: 'ai_summary_generated',
+      event_data: {
+        model: summaryResult.model,
+        guardrail_strip_count: summaryResult.guardrailStripCount,
       },
       actor_user_id: null,
       actor_kind: 'system',
