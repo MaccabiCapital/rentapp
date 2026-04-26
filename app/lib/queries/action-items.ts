@@ -441,6 +441,52 @@ async function pendingLateFees(
   ]
 }
 
+async function screeningReviewsWaiting(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+): Promise<ActionItem[]> {
+  const { data } = await supabase
+    .from('screening_reports')
+    .select(
+      `id, prospect_id, risk_band,
+       prospect:prospects ( first_name, last_name )`,
+    )
+    .in('status', ['complete', 'partial'])
+    .in('risk_band', ['amber', 'red'])
+    .is('landlord_decision', null)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (data ?? []) as any[]
+  if (rows.length === 0) return []
+
+  const reds = rows.filter((r) => r.risk_band === 'red').length
+  const ambers = rows.filter((r) => r.risk_band === 'amber').length
+  const severity: ActionSeverity = reds > 0 ? 'urgent' : 'warning'
+
+  // Single aggregated tile rather than one per prospect. The first
+  // prospect's URL is the link; counts go in the title.
+  const firstProspectId = rows[0].prospect_id
+
+  const titleParts: string[] = []
+  if (reds > 0) titleParts.push(`${reds} red`)
+  if (ambers > 0) titleParts.push(`${ambers} amber`)
+
+  return [
+    {
+      id: 'screening-reviews-waiting',
+      severity,
+      category: 'Screening',
+      title: `${rows.length} screening review${rows.length === 1 ? '' : 's'} waiting (${titleParts.join(', ')})`,
+      body: 'Proof Check ran and raised review-prompts on these applications. Open each to view findings, then approve, request more info, or reject.',
+      href: `/dashboard/prospects/${firstProspectId}/screening`,
+      icon: '⌖',
+      count: rows.length,
+    },
+  ]
+}
+
 async function urgentMaintenance(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -490,6 +536,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     prospects,
     maint,
     lateFees,
+    screening,
   ] = await Promise.all([
     safe(() => leasesExpiringSoon(supabase, nowMs), []),
     safe(() => vacantUnitsWithoutListing(supabase), []),
@@ -500,6 +547,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     safe(() => prospectFollowups(supabase, nowMs), []),
     safe(() => urgentMaintenance(supabase), []),
     safe(() => pendingLateFees(supabase), []),
+    safe(() => screeningReviewsWaiting(supabase), []),
   ])
 
   const all: ActionItem[] = [
@@ -512,6 +560,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     ...prospects,
     ...maint,
     ...lateFees,
+    ...screening,
   ]
 
   return all.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity])

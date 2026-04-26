@@ -6,6 +6,7 @@
 // landlord has properties in at the top, then shows all other
 // researched states, then unresearched states.
 
+import Link from 'next/link'
 import {
   getAllStateRules,
   getStatesInPortfolio,
@@ -41,6 +42,38 @@ export default async function CompliancePage() {
       <div className="mb-8">
         <ComplianceDisclaimer />
       </div>
+
+      <section className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+          Audit logs
+        </h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <Link
+            href="/dashboard/leasing-assistant/audit"
+            className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm hover:bg-zinc-50"
+          >
+            <div className="text-sm font-semibold text-zinc-900">
+              Leasing assistant audit
+            </div>
+            <p className="mt-1 text-xs text-zinc-600">
+              Every prospect message — inbound, outbound, generated drafts,
+              guardrail flags. 3+ year retention.
+            </p>
+          </Link>
+          <Link
+            href="/dashboard/screening/audit"
+            className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm hover:bg-zinc-50"
+          >
+            <div className="text-sm font-semibold text-zinc-900">
+              Screening audit (Proof Check)
+            </div>
+            <p className="mt-1 text-xs text-zinc-600">
+              Every screening run, document upload, AI summary, and
+              landlord decision. 7-year retention (FCRA / ECOA).
+            </p>
+          </Link>
+        </div>
+      </section>
 
       {myStatesRules.length > 0 && (
         <section className="mb-10">
