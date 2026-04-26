@@ -4,17 +4,21 @@
 //
 // THE ONLY AI-USING FILE in the screening module.
 //
-// v1 ships in stub mode: no LLM call. The summary is built
-// deterministically from the signal list using the same plain-
-// English templates the signal builders already use. The model
-// field is marked 'stub' so the audit log distinguishes a real
-// call from a templated one.
+// Two paths:
+//   - When ANTHROPIC_API_KEY is set: live Claude call producing a
+//     plain-English narrative ≤4 paragraphs + numbered checklist.
+//   - When key is absent: deterministic template built from the
+//     signal list. Indistinguishable to the user except for the
+//     "Live AI not configured" chip in the UI.
 //
-// When ANTHROPIC_API_KEY becomes available, replace the body of
-// generateAiSummary with a real call. The output MUST pass through
-// runOutputGuardrails before being returned (strips decision
-// language, protected-class references, source-of-income filtering).
+// Both paths are post-processed through runOutputGuardrails which
+// strips decision language ("denied", "rejected", "do not approve")
+// and runs the leasing-assistant outbound scan. If anything is
+// stripped, the audit log captures the strip count.
+//
+// The live path falls back to the template on any API error.
 
+import Anthropic from '@anthropic-ai/sdk'
 import { scanOutboundMessage } from '@/app/lib/leasing/fair-housing-guardrails'
 import {
   SCREENING_RISK_BAND_LABELS,
@@ -138,22 +142,110 @@ function buildTemplateSummary(opts: {
 // Main entry point
 // ------------------------------------------------------------
 
+// Model used when live mode is active. Set via env var to override
+// without code change.
+const LIVE_MODEL =
+  process.env.SCREENING_AI_MODEL ?? 'claude-opus-4-7'
+
+const SYSTEM_PROMPT = `You are a Proof Check assistant inside a landlord
+operating system called Rentbase. You summarize the OUTPUT of a
+deterministic forensic engine that has already analyzed an applicant's
+documents.
+
+Hard rules — never break these:
+1. NEVER recommend a decision. The landlord decides. Do not say "approve",
+   "deny", "reject", "do not recommend", "should be approved", or any variant.
+2. NEVER invent new signals. Only summarize the deterministic findings the
+   user gives you. If a signal isn't in the input, it doesn't exist for you.
+3. NEVER reference protected classes (race, color, religion, sex, national
+   origin, disability, familial status, marital status, source of income,
+   age, military status). If the deterministic findings don't mention these,
+   you don't either.
+4. Income from any legal source counts equally — W-2, 1099, Social Security,
+   disability, vouchers, retirement. Never imply otherwise.
+5. Use plain English. Write at an 8th-grade reading level. Maximum 4
+   short paragraphs. Then a numbered checklist titled "Verify these
+   things before signing".
+6. End with: "This is a recommendation. The decision is yours."
+
+Format:
+- 1-2 paragraphs of plain-English summary of the findings
+- Optional 1 paragraph naming the most important inconsistencies
+- Optional 1 paragraph noting what looks verified
+- Numbered checklist: "Verify these things before signing"
+- Closing line as written above`
+
+function buildLivePrompt(opts: {
+  signals: ScreeningSignal[]
+  riskBand: ScreeningRiskBand | null
+  documentsAnalyzed: number
+}): string {
+  const lines: string[] = []
+  lines.push(`Documents analyzed: ${opts.documentsAnalyzed}`)
+  if (opts.riskBand) {
+    lines.push(`Overall risk band: ${opts.riskBand}`)
+  }
+  lines.push(`Number of signals raised: ${opts.signals.length}`)
+  lines.push('')
+  if (opts.signals.length === 0) {
+    lines.push('No signals were raised.')
+  } else {
+    lines.push('Signals (each is one finding):')
+    for (const s of opts.signals) {
+      lines.push(`---`)
+      lines.push(`Severity: ${s.severity}`)
+      lines.push(`Title: ${s.title}`)
+      lines.push(`Detail: ${s.detail}`)
+      if (s.suggested_action) {
+        lines.push(`Suggested verification: ${s.suggested_action}`)
+      }
+    }
+  }
+  return lines.join('\n')
+}
+
+async function callAnthropicSummary(opts: {
+  signals: ScreeningSignal[]
+  riskBand: ScreeningRiskBand | null
+  documentsAnalyzed: number
+  apiKey: string
+}): Promise<{ text: string; model: string }> {
+  const client = new Anthropic({ apiKey: opts.apiKey })
+  const userMessage = buildLivePrompt(opts)
+
+  const response = await client.messages.create({
+    model: LIVE_MODEL,
+    max_tokens: 1024,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  })
+
+  const textBlock = response.content.find((b) => b.type === 'text')
+  const text = textBlock && 'text' in textBlock ? textBlock.text : ''
+  return { text: text || buildTemplateSummary(opts), model: LIVE_MODEL }
+}
+
 export async function generateAiSummary(opts: {
   signals: ScreeningSignal[]
   riskBand: ScreeningRiskBand | null
   documentsAnalyzed: number
 }): Promise<AiSummaryResult> {
-  // v1: always stub. When ANTHROPIC_API_KEY is configured, swap
-  // to a real client.call call here. Preserve runOutputGuardrails
-  // post-processing.
   const apiKey = process.env.ANTHROPIC_API_KEY
 
   let raw: string
   let model: string
+
   if (apiKey) {
-    // Live AI path goes here. Until wired, fall back to template.
-    raw = buildTemplateSummary(opts)
-    model = 'stub'
+    try {
+      const live = await callAnthropicSummary({ ...opts, apiKey })
+      raw = live.text
+      model = live.model
+    } catch {
+      // Fall back to template on any API error so the engine never
+      // gets stuck. Audit log will show model='stub' for this run.
+      raw = buildTemplateSummary(opts)
+      model = 'stub'
+    }
   } else {
     raw = buildTemplateSummary(opts)
     model = 'stub'

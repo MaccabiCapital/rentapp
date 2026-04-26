@@ -186,20 +186,39 @@ export default async function ProspectScreeningPage({
         </div>
       </section>
 
-      {/* Section B: AI summary (Phase 8 stub) */}
+      {/* Section B: AI summary */}
       {latestReport && (
         <section className="mb-8">
           <h2 className="mb-3 text-lg font-semibold text-zinc-900">
             AI summary
           </h2>
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                 AI summary — recommendation only, never a decision
               </span>
-              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-                Live AI not configured — using rule-based template
-              </span>
+              {latestReport.ai_summary_model === 'stub' ? (
+                <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                  Rule-based template (live AI not configured)
+                </span>
+              ) : latestReport.ai_summary_model ? (
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                  Live · {latestReport.ai_summary_model}
+                </span>
+              ) : null}
+              {latestReport.ai_summary_generated_at && (
+                <span className="text-xs text-zinc-500">
+                  Generated{' '}
+                  {new Date(
+                    latestReport.ai_summary_generated_at,
+                  ).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
             </div>
             <div className="text-sm text-zinc-700">
               {latestReport.ai_summary ? (
@@ -212,9 +231,8 @@ export default async function ProspectScreeningPage({
                   ))
               ) : (
                 <p className="text-zinc-500">
-                  AI summary will appear here once Phase 8 is shipped. The
-                  deterministic signals below are already complete and
-                  authoritative.
+                  No AI summary on this report yet — re-run Proof Check to
+                  generate one.
                 </p>
               )}
             </div>

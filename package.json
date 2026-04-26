@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
     "@react-pdf/renderer": "^3.4.5",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
