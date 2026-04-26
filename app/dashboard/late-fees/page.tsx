@@ -183,9 +183,19 @@ export default async function LateFeesPage() {
                         </div>
                       )}
                       {r.status === 'paid' && r.paid_at && (
-                        <span className="text-xs text-zinc-500">
-                          {formatDate(r.paid_at.slice(0, 10))}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500">
+                            {formatDate(r.paid_at.slice(0, 10))}
+                          </span>
+                          <a
+                            href={`/dashboard/late-fees/${r.id}/pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-600 hover:text-indigo-700"
+                          >
+                            Receipt
+                          </a>
+                        </div>
                       )}
                       {r.status === 'waived' && r.waived_reason && (
                         <span className="text-xs text-zinc-500">

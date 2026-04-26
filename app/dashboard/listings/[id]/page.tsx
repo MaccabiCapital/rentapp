@@ -5,6 +5,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getListing } from '@/app/lib/queries/listings'
+import { scanListingCopyDeterministic } from '@/app/lib/compliance/listing-scanner'
 import { ListingShare } from '@/app/ui/listing-share'
 import { ListingToggleButton } from '@/app/ui/listing-toggle-button'
 import { DeleteListingButton } from '@/app/ui/delete-listing-button'
@@ -38,6 +39,29 @@ export default async function ListingDetailPage({
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  // Run the listing scanner against the description so the landlord
+  // sees fair-housing flags before applicants ever see the listing.
+  // Uses the property's state if known; falls back to federal baseline.
+  const scanJurisdiction =
+    listing.property.state && listing.property.state.length === 2
+      ? listing.property.state.toUpperCase()
+      : 'US'
+  let scanFindings: ReturnType<typeof scanListingCopyDeterministic>['findings'] =
+    []
+  if (listing.description && listing.description.length > 0) {
+    try {
+      scanFindings = scanListingCopyDeterministic({
+        copy: listing.description,
+        jurisdiction: scanJurisdiction,
+        listingId: listing.id,
+      }).findings
+    } catch {
+      scanFindings = []
+    }
+  }
+  const redCount = scanFindings.filter((f) => f.severity === 'red').length
+  const amberCount = scanFindings.filter((f) => f.severity === 'amber').length
 
   return (
     <div>
@@ -95,6 +119,47 @@ export default async function ListingDetailPage({
           />
         </div>
       </div>
+
+      {/* Compliance scanner banner */}
+      {scanFindings.length > 0 && (
+        <div
+          className={`mt-6 rounded-md border p-4 text-sm ${
+            redCount > 0
+              ? 'border-red-200 bg-red-50 text-red-900'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          <div className="font-semibold">
+            {redCount > 0
+              ? 'Fair-housing review needed before this listing goes public'
+              : 'Listing copy could be improved for fair-housing compliance'}
+          </div>
+          <p className="mt-1">
+            {scanFindings.length} finding
+            {scanFindings.length === 1 ? '' : 's'}: {redCount} red,{' '}
+            {amberCount} amber. Top issues:{' '}
+            {scanFindings
+              .slice(0, 3)
+              .map((f) => f.title)
+              .join('; ')}
+            .
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <Link
+              href="/dashboard/compliance"
+              className="text-xs font-medium underline"
+            >
+              Open Compliance →
+            </Link>
+            <Link
+              href={`/dashboard/listings/${listing.id}/edit`}
+              className="text-xs font-medium underline"
+            >
+              Edit listing copy →
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard label="Views" value={listing.view_count.toString()} />

@@ -14,6 +14,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getNotice } from '@/app/lib/queries/notices'
 import { getStateRule } from '@/app/lib/queries/state-rules'
 import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
+import { getSignedLogoUrl } from '@/app/lib/storage/landlord-branding'
 import { parseNoticeData } from '@/app/lib/schemas/notice'
 import { NoticePdf } from '@/app/ui/notice-pdf'
 
@@ -77,6 +78,10 @@ export async function GET(
       .filter(Boolean)
       .join(' · ') || null
 
+  const logoUrl = profile?.logo_storage_path
+    ? await getSignedLogoUrl(profile.logo_storage_path, 60)
+    : null
+
   const property = {
     name: notice.lease?.unit?.property?.name ?? 'Property',
     street_address: notice.lease?.unit?.property?.street_address ?? null,
@@ -108,6 +113,7 @@ export async function GET(
         name: displayName,
         address_lines: landlordAddressLines,
         contact_line: contactLine,
+        logoUrl,
       }}
       tenant={{ name: tenantName }}
       property={property}

@@ -11,6 +11,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSettlement } from '@/app/lib/queries/security-deposits'
 import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
+import { getSignedLogoUrl } from '@/app/lib/storage/landlord-branding'
 import { SettlementPdf } from '@/app/ui/settlement-pdf'
 
 export async function GET(
@@ -64,6 +65,10 @@ export async function GET(
       .filter(Boolean)
       .join(' · ') || null
 
+  const logoUrl = profile?.logo_storage_path
+    ? await getSignedLogoUrl(profile.logo_storage_path, 60)
+    : null
+
   const property = {
     name: settlement.lease?.unit?.property?.name ?? 'Property',
     street_address: settlement.lease?.unit?.property?.street_address ?? null,
@@ -87,6 +92,7 @@ export async function GET(
         name: displayName,
         address_lines: landlordAddressLines,
         contact_line: contactLine,
+        logoUrl,
       }}
       tenant={{
         name: tenantName,

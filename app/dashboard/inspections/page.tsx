@@ -95,12 +95,20 @@ export default async function InspectionsPage() {
             {inspections.length === 1 ? 'inspection' : 'inspections'} on file
           </p>
         </div>
-        <Link
-          href="/dashboard/inspections/new"
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        >
-          Start an inspection
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/inspections/calendar"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+          >
+            Calendar
+          </Link>
+          <Link
+            href="/dashboard/inspections/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
+            Start an inspection
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">

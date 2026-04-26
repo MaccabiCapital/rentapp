@@ -159,7 +159,10 @@ export default async function DashboardLayout({
               style={{ backgroundColor: brandColor ?? '#0f172a' }}
             />
           )}
-          <span className="text-base font-semibold tracking-tight">
+          <span
+            className="text-base font-semibold tracking-tight"
+            style={brandColor ? { color: brandColor } : undefined}
+          >
             {companyName}
           </span>
         </div>

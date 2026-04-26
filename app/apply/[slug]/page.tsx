@@ -50,7 +50,7 @@ export default async function ApplyPage({
             ← Back to listing
           </Link>
           <span className="text-xs text-zinc-500">
-            Rental application · Rentapp
+            Rental application · {listing.company_name ?? 'Rentapp'}
           </span>
         </div>
       </header>
@@ -89,7 +89,7 @@ export default async function ApplyPage({
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
           <div>
-            <ApplicationForm slug={slug} />
+            <ApplicationForm slug={slug} petPolicy={listing.pet_policy} />
           </div>
           <div>
             <ApplicationFaqBot />

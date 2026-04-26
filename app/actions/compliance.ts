@@ -151,6 +151,91 @@ export async function acknowledgeFinding(
   return { success: true }
 }
 
+export async function bulkAcknowledgeFindings(
+  findingIds: string[],
+): Promise<ActionState> {
+  if (findingIds.length === 0) return { success: true }
+
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, message: 'Sign in.' }
+
+  const { error } = await supabase
+    .from('compliance_findings')
+    .update({ status: 'acknowledged' })
+    .in('id', findingIds)
+    .eq('owner_id', user.id)
+    .eq('status', 'open')
+
+  if (error) return { success: false, message: error.message }
+
+  // One audit row per acknowledged finding
+  const auditRows = findingIds.map((id) => ({
+    owner_id: user.id,
+    finding_id: id,
+    event: 'finding_acknowledged',
+    event_data: { bulk: true },
+    actor_user_id: user.id,
+    actor_kind: 'landlord',
+  }))
+  await supabase.from('compliance_audit_log').insert(auditRows)
+
+  revalidatePath('/dashboard/compliance')
+  revalidatePath('/dashboard/compliance/findings')
+  return { success: true }
+}
+
+export async function bulkDismissFindings(
+  findingIds: string[],
+  reason: string,
+): Promise<ActionState> {
+  if (findingIds.length === 0) return { success: true }
+  const trimmed = reason.trim()
+  if (trimmed.length === 0) {
+    return {
+      success: false,
+      errors: { reason: ['Reason is required for bulk dismiss.'] },
+    }
+  }
+
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, message: 'Sign in.' }
+
+  const nowIso = new Date().toISOString()
+  const { error } = await supabase
+    .from('compliance_findings')
+    .update({
+      status: 'dismissed',
+      dismissed_reason: trimmed,
+      dismissed_at: nowIso,
+      dismissed_by: user.id,
+    })
+    .in('id', findingIds)
+    .eq('owner_id', user.id)
+    .eq('status', 'open')
+
+  if (error) return { success: false, message: error.message }
+
+  const auditRows = findingIds.map((id) => ({
+    owner_id: user.id,
+    finding_id: id,
+    event: 'finding_dismissed',
+    event_data: { bulk: true, reason: trimmed },
+    actor_user_id: user.id,
+    actor_kind: 'landlord',
+  }))
+  await supabase.from('compliance_audit_log').insert(auditRows)
+
+  revalidatePath('/dashboard/compliance')
+  revalidatePath('/dashboard/compliance/findings')
+  return { success: true }
+}
+
 export async function markFindingFixed(
   findingId: string,
 ): Promise<ActionState> {

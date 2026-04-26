@@ -19,7 +19,7 @@ import {
 import { ComplianceDisclaimer } from '@/app/ui/compliance-disclaimer'
 import { StateRuleCard } from '@/app/ui/state-rule-card'
 import { ListingCopyScanner } from '@/app/ui/listing-copy-scanner'
-import { ComplianceFindingRow } from '@/app/ui/compliance-finding-row'
+import { BulkFindingsList } from '@/app/ui/bulk-findings-list'
 
 function formatDate(iso: string | null) {
   if (!iso) return '—'
@@ -203,17 +203,13 @@ export default async function CompliancePage() {
         <ListingCopyScanner />
       </section>
 
-      {/* Open findings list */}
+      {/* Open findings list with bulk actions */}
       {openFindings.length > 0 && (
         <section className="mb-10">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
             Recent open findings ({openFindings.length})
           </h2>
-          <div className="space-y-2">
-            {openFindings.map((f) => (
-              <ComplianceFindingRow key={f.id} finding={f} />
-            ))}
-          </div>
+          <BulkFindingsList findings={openFindings} />
         </section>
       )}
 

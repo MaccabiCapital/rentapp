@@ -13,6 +13,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { getInspection } from '@/app/lib/queries/inspections'
 import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
+import { getSignedLogoUrl } from '@/app/lib/storage/landlord-branding'
 import { resolvePhotoUrls } from '@/app/lib/storage/photos'
 import { InspectionPdf } from '@/app/ui/inspection-pdf'
 
@@ -57,6 +58,10 @@ export async function GET(
     (user.user_metadata?.full_name as string | undefined) ??
     null
 
+  const logoUrl = profile?.logo_storage_path
+    ? await getSignedLogoUrl(profile.logo_storage_path, 60)
+    : null
+
   const pdf = await renderToBuffer(
     <InspectionPdf
       inspection={inspection}
@@ -68,6 +73,7 @@ export async function GET(
         leaseStart,
         leaseEnd,
         landlordName,
+        logoUrl,
       }}
       photoUrls={photoUrls}
       generatedOn={new Date().toISOString().slice(0, 10)}

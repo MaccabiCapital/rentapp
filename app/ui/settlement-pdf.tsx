@@ -13,6 +13,7 @@
 
 import {
   Document,
+  Image,
   Page,
   Text,
   View,
@@ -171,6 +172,7 @@ export type SettlementPdfProps = {
     name: string
     address_lines?: string[]
     contact_line?: string | null
+    logoUrl?: string | null
   }
   tenant: {
     name: string
@@ -267,6 +269,17 @@ export function SettlementPdf(props: SettlementPdfProps) {
               licensed in the property&apos;s state before mailing. Rentapp
               is not a law firm.
             </Text>
+          </View>
+        )}
+
+        {/* Optional logo at top */}
+        {landlord.logoUrl && (
+          <View style={{ marginBottom: 8 }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image */}
+            <Image
+              src={landlord.logoUrl}
+              style={{ maxHeight: 40, maxWidth: 160 }}
+            />
           </View>
         )}
 

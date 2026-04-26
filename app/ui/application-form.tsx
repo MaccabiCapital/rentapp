@@ -14,7 +14,13 @@ const INITIAL_STATE: PublicApplicationResult = {
   message: '',
 }
 
-export function ApplicationForm({ slug }: { slug: string }) {
+export function ApplicationForm({
+  slug,
+  petPolicy,
+}: {
+  slug: string
+  petPolicy?: string | null
+}) {
   const [state, formAction, isPending] = useActionState<
     PublicApplicationResult,
     FormData
@@ -81,6 +87,12 @@ export function ApplicationForm({ slug }: { slug: string }) {
           name="has_pets"
           placeholder="e.g. '1 dog, 40lb, well-trained' or leave blank for no pets"
         />
+        {petPolicy && (
+          <p className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+            <strong>Landlord&rsquo;s pet policy: </strong>
+            {petPolicy}
+          </p>
+        )}
       </Section>
 
       <Section title="Income + employment">
