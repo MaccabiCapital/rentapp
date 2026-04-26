@@ -12,6 +12,11 @@ import { ConvertProspectButton } from '@/app/ui/convert-prospect-button'
 import { DeleteProspectButton } from '@/app/ui/delete-prospect-button'
 import { PROSPECT_SOURCE_LABELS } from '@/app/lib/schemas/prospect'
 import { CommunicationsTimeline } from '@/app/ui/communications-timeline'
+import { ProspectScreeningCard } from '@/app/ui/prospect-screening-card'
+import {
+  getLatestScreeningReportForProspect,
+  listApplicationDocuments,
+} from '@/app/lib/queries/screening'
 
 function formatDateTime(value: string | null) {
   if (!value) return '—'
@@ -46,6 +51,11 @@ export default async function ProspectDetailPage({
   const { id } = await params
   const prospect = await getProspect(id)
   if (!prospect) notFound()
+
+  const [latestScreeningReport, screeningDocuments] = await Promise.all([
+    getLatestScreeningReportForProspect(id),
+    listApplicationDocuments(id),
+  ])
 
   const nowMs = now()
   const name = displayName(prospect)
@@ -174,6 +184,12 @@ export default async function ProspectDetailPage({
           </Link>
         </div>
       )}
+
+      <ProspectScreeningCard
+        prospectId={prospect.id}
+        latestReport={latestScreeningReport}
+        documentsCount={screeningDocuments.length}
+      />
 
       <div className="mt-6 flex justify-end">
         <DeleteProspectButton prospectId={prospect.id} prospectName={name} />
