@@ -180,6 +180,7 @@ export type InspectionPdfProps = {
     tenantName: string
     leaseStart: string
     leaseEnd: string
+    landlordName?: string | null
   }
   // Maps a storage-path string to its resolved signed URL. Paths
   // not found in this map are skipped (no image).
@@ -232,7 +233,7 @@ export function InspectionPdf({
       <Page size="LETTER" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>Rentapp</Text>
+          <Text style={styles.logo}>{context.landlordName || 'Rentapp'}</Text>
           <Text style={styles.title}>
             {INSPECTION_TYPE_LABELS[inspection.type]} Inspection
           </Text>

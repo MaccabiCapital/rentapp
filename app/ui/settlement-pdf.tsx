@@ -169,6 +169,8 @@ export type SettlementPdfProps = {
   settlementIdShort: string
   landlord: {
     name: string
+    address_lines?: string[]
+    contact_line?: string | null
   }
   tenant: {
     name: string
@@ -272,6 +274,14 @@ export function SettlementPdf(props: SettlementPdfProps) {
         <View style={styles.block}>
           <Text style={styles.label}>From</Text>
           <Text style={styles.line}>{landlord.name}</Text>
+          {(landlord.address_lines ?? []).map((line, i) => (
+            <Text key={i} style={styles.line}>
+              {line}
+            </Text>
+          ))}
+          {landlord.contact_line && (
+            <Text style={styles.line}>{landlord.contact_line}</Text>
+          )}
         </View>
 
         {/* Date */}

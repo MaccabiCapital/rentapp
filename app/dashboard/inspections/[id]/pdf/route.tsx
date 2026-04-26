@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { getInspection } from '@/app/lib/queries/inspections'
+import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
 import { resolvePhotoUrls } from '@/app/lib/storage/photos'
 import { InspectionPdf } from '@/app/ui/inspection-pdf'
 
@@ -50,6 +51,12 @@ export async function GET(
   const allPhotoPaths = items.flatMap((i) => i.photos)
   const photoUrls = await resolvePhotoUrls(allPhotoPaths)
 
+  const profile = await getMyCompanyProfile()
+  const landlordName =
+    profile?.company_name ??
+    (user.user_metadata?.full_name as string | undefined) ??
+    null
+
   const pdf = await renderToBuffer(
     <InspectionPdf
       inspection={inspection}
@@ -60,6 +67,7 @@ export async function GET(
         tenantName,
         leaseStart,
         leaseEnd,
+        landlordName,
       }}
       photoUrls={photoUrls}
       generatedOn={new Date().toISOString().slice(0, 10)}

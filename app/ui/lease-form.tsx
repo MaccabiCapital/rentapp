@@ -29,6 +29,12 @@ type LeaseFormProps = {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>
   tenantOptions?: TenantOption[]
   defaultValues?: Lease
+  // Company-wide defaults — only consulted when this is a new lease
+  // (i.e. defaultValues is undefined). Keeps edit-mode untouched.
+  companyDefaults?: {
+    late_fee_amount?: number | null
+    late_fee_grace_days?: number | null
+  }
   submitLabel?: string
   mode: 'create' | 'edit'
 }
@@ -37,6 +43,7 @@ export function LeaseForm({
   action,
   tenantOptions,
   defaultValues,
+  companyDefaults,
   submitLabel = 'Save lease',
   mode,
 }: LeaseFormProps) {
@@ -168,7 +175,11 @@ export function LeaseForm({
         <CurrencyField
           label="Late fee"
           name="late_fee_amount"
-          defaultValue={defaultValues?.late_fee_amount?.toString() ?? ''}
+          defaultValue={
+            defaultValues?.late_fee_amount?.toString() ??
+            companyDefaults?.late_fee_amount?.toString() ??
+            ''
+          }
           errors={errors.late_fee_amount}
         />
         <Field
@@ -177,7 +188,11 @@ export function LeaseForm({
           type="number"
           min="0"
           max="30"
-          defaultValue={defaultValues?.late_fee_grace_days?.toString() ?? '5'}
+          defaultValue={
+            defaultValues?.late_fee_grace_days?.toString() ??
+            companyDefaults?.late_fee_grace_days?.toString() ??
+            '5'
+          }
           errors={errors.late_fee_grace_days}
         />
       </div>

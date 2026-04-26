@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getProperty } from '@/app/lib/queries/properties'
 import { getUnit } from '@/app/lib/queries/units'
 import { getTenantsForPicker } from '@/app/lib/queries/tenants'
+import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
 import { createLease } from '@/app/actions/leases'
 import { LeaseForm } from '@/app/ui/lease-form'
 
@@ -12,10 +13,11 @@ export default async function NewLeasePage({
   params: Promise<{ id: string; unitId: string }>
 }) {
   const { id, unitId } = await params
-  const [property, unit, tenantOptions] = await Promise.all([
+  const [property, unit, tenantOptions, profile] = await Promise.all([
     getProperty(id),
     getUnit(unitId, id),
     getTenantsForPicker(),
+    getMyCompanyProfile(),
   ])
   if (!property || !unit) notFound()
 
@@ -56,6 +58,14 @@ export default async function NewLeasePage({
       <LeaseForm
         action={createForUnit}
         tenantOptions={tenantOptions}
+        companyDefaults={
+          profile
+            ? {
+                late_fee_amount: profile.default_late_fee_amount,
+                late_fee_grace_days: profile.default_grace_period_days,
+              }
+            : undefined
+        }
         mode="create"
         submitLabel="Create lease"
       />

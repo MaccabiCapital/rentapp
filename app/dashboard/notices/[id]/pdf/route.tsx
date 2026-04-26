@@ -13,6 +13,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { getNotice } from '@/app/lib/queries/notices'
 import { getStateRule } from '@/app/lib/queries/state-rules'
+import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
 import { parseNoticeData } from '@/app/lib/schemas/notice'
 import { NoticePdf } from '@/app/ui/notice-pdf'
 
@@ -47,8 +48,34 @@ export async function GET(
     ? `${notice.lease.tenant.first_name} ${notice.lease.tenant.last_name}`.trim()
     : 'Tenant'
 
+  const profile = await getMyCompanyProfile()
   const displayName =
-    (user.user_metadata?.full_name as string | undefined) ?? user.email ?? 'Landlord'
+    profile?.company_name ??
+    (user.user_metadata?.full_name as string | undefined) ??
+    user.email ??
+    'Landlord'
+
+  const landlordAddressLines: string[] = []
+  if (profile?.business_street_address) {
+    landlordAddressLines.push(
+      profile.business_unit
+        ? `${profile.business_street_address}, ${profile.business_unit}`
+        : profile.business_street_address,
+    )
+  }
+  const cityLine = [
+    profile?.business_city,
+    profile?.business_state,
+    profile?.business_postal_code,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  if (cityLine) landlordAddressLines.push(cityLine)
+
+  const contactLine =
+    [profile?.business_email, profile?.business_phone]
+      .filter(Boolean)
+      .join(' · ') || null
 
   const property = {
     name: notice.lease?.unit?.property?.name ?? 'Property',
@@ -77,7 +104,11 @@ export async function GET(
       data={parsedData}
       generatedOn={notice.generated_at.slice(0, 10)}
       noticeIdShort={notice.id.slice(0, 8)}
-      landlord={{ name: displayName }}
+      landlord={{
+        name: displayName,
+        address_lines: landlordAddressLines,
+        contact_line: contactLine,
+      }}
       tenant={{ name: tenantName }}
       property={property}
       stateRules={stateRules}

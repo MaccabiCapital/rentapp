@@ -161,6 +161,8 @@ export type NoticePdfProps = {
   noticeIdShort: string
   landlord: {
     name: string
+    address_lines?: string[]
+    contact_line?: string | null
   }
   tenant: {
     name: string
@@ -220,10 +222,20 @@ export function NoticePdf(props: NoticePdfProps) {
           </Text>
         </View>
 
-        {/* Sender block — landlord name & property */}
+        {/* Sender block — company name + address + contact */}
         <View style={styles.senderBlock}>
           <Text style={styles.senderLine}>{landlord.name}</Text>
-          <Text style={styles.senderLine}>Landlord / Property Manager</Text>
+          {(landlord.address_lines ?? []).map((line, i) => (
+            <Text key={i} style={styles.senderLine}>
+              {line}
+            </Text>
+          ))}
+          {landlord.contact_line && (
+            <Text style={styles.senderLine}>{landlord.contact_line}</Text>
+          )}
+          {(!landlord.address_lines || landlord.address_lines.length === 0) && (
+            <Text style={styles.senderLine}>Landlord / Property Manager</Text>
+          )}
         </View>
 
         <Text style={styles.dateLine}>{formatDateLong(generatedOn)}</Text>
