@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { getUser } from '@/lib/supabase/get-user'
 import { signOut } from '@/app/actions/auth'
 import { getTriageCount } from '@/app/lib/queries/communications'
+import { getMyCompanyProfile } from '@/app/lib/queries/company-profile'
+import { getSignedLogoUrl } from '@/app/lib/storage/landlord-branding'
 
 type NavItem = {
   href: string
@@ -84,6 +86,14 @@ export default async function DashboardLayout({
     redirect('/sign-in')
   }
 
+  // Company profile drives the sidebar logo + brand-color accent.
+  const companyProfile = await getMyCompanyProfile()
+  const sidebarLogoUrl = companyProfile?.logo_storage_path
+    ? await getSignedLogoUrl(companyProfile.logo_storage_path, 3600)
+    : null
+  const brandColor = companyProfile?.brand_color ?? null
+  const companyName = companyProfile?.company_name ?? 'Rentapp'
+
   // Triage inbox badge — total unassigned inbound messages. Cheap
   // count query, runs on every dashboard page render.
   let inboxCount = 0
@@ -129,13 +139,28 @@ export default async function DashboardLayout({
     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900'
 
   return (
-    <div className="flex min-h-full flex-1">
+    <div
+      className="flex min-h-full flex-1"
+      style={brandColor ? ({ '--brand-color': brandColor } as React.CSSProperties) : undefined}
+    >
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-6">
-          <div className="h-7 w-7 rounded-md bg-slate-900" />
+          {sidebarLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={sidebarLogoUrl}
+              alt="Logo"
+              className="h-7 w-7 rounded-md object-contain"
+            />
+          ) : (
+            <div
+              className="h-7 w-7 rounded-md"
+              style={{ backgroundColor: brandColor ?? '#0f172a' }}
+            />
+          )}
           <span className="text-base font-semibold tracking-tight">
-            Rentapp
+            {companyName}
           </span>
         </div>
         <nav className="flex-1 overflow-y-auto p-4">
@@ -185,7 +210,7 @@ export default async function DashboardLayout({
                   </svg>
                 </span>
                 <span className="text-base font-semibold tracking-tight">
-                  Rentapp
+                  {companyName}
                 </span>
                 {inboxCount > 0 && (
                   <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">

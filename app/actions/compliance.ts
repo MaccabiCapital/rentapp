@@ -13,6 +13,10 @@ import { revalidatePath } from 'next/cache'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { scanListingCopyDeterministic } from '@/app/lib/compliance/listing-scanner'
+import {
+  runDisparateImpactForOwner,
+  persistRunResult,
+} from '@/app/lib/compliance/disparate-impact'
 import { uploadCriteriaPdf } from '@/app/lib/storage/compliance-documents'
 import { CriteriaPdf } from '@/app/ui/criteria-pdf'
 import {
@@ -540,7 +544,7 @@ async function renderAndStorePdf(
   const { data: profileRow } = await supabase
     .from('landlord_settings')
     .select(
-      `company_name, business_email, business_phone,
+      `company_name, logo_storage_path, business_email, business_phone,
        business_street_address, business_unit, business_city,
        business_state, business_postal_code`,
     )
@@ -554,6 +558,17 @@ async function renderAndStorePdf(
     (user.user_metadata?.full_name as string | undefined) ??
     user.email ??
     'Landlord'
+
+  // Sign the logo URL if a logo is configured. @react-pdf/renderer
+  // fetches the image at render time, which works for short-lived
+  // signed URLs (criteria PDFs are rendered on-demand).
+  let logoUrl: string | null = null
+  if (profile?.logo_storage_path) {
+    const { data: signed } = await supabase.storage
+      .from('landlord-branding')
+      .createSignedUrl(profile.logo_storage_path, 60)
+    logoUrl = signed?.signedUrl ?? null
+  }
 
   // CriteriaPdf returns a <Document>; cast through unknown so
   // renderToBuffer's narrow ReactElement<DocumentProps> type accepts
@@ -575,6 +590,7 @@ async function renderAndStorePdf(
       : null,
     businessEmail: profile?.business_email ?? null,
     businessPhone: profile?.business_phone ?? null,
+    logoUrl,
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfBuffer = await renderToBuffer(pdfElement as any)
@@ -705,4 +721,34 @@ export async function deleteCriteria(criteriaId: string): Promise<ActionState> {
   revalidatePath('/dashboard/compliance')
   revalidatePath('/dashboard/compliance/criteria')
   redirect('/dashboard/compliance/criteria')
+}
+
+// ------------------------------------------------------------
+// Disparate-impact: manual trigger
+// ------------------------------------------------------------
+//
+// Lets a landlord run the analysis on demand from the dashboard
+// instead of waiting for the nightly cron. Same engine + persist
+// path that the cron uses.
+
+export async function runDisparateImpactNow(): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, message: 'Sign in.' }
+
+  try {
+    const result = await runDisparateImpactForOwner(user.id)
+    await persistRunResult(result)
+  } catch (e) {
+    return {
+      success: false,
+      message: e instanceof Error ? e.message : 'Run failed.',
+    }
+  }
+
+  revalidatePath('/dashboard/compliance')
+  revalidatePath('/dashboard/compliance/disparate-impact')
+  return { success: true }
 }

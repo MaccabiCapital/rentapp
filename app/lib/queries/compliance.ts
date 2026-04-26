@@ -64,6 +64,54 @@ export async function listCriteriaVersions(
   return (data ?? []) as CriteriaVersionRow[]
 }
 
+// ------------------------------------------------------------
+// Disparate-impact runs
+// ------------------------------------------------------------
+
+export type DisparateImpactRun = {
+  id: string
+  owner_id: string
+  status: 'pending' | 'running' | 'complete' | 'partial' | 'error'
+  window_start: string
+  window_end: string
+  decisions_total: number
+  approvals: number
+  rejections: number
+  more_info_requests: number
+  cohort_breakdowns: unknown
+  findings_red: number
+  findings_amber: number
+  error_text: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+export async function getLatestDisparateImpactRun(): Promise<DisparateImpactRun | null> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('disparate_impact_runs')
+    .select('*')
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  return data as DisparateImpactRun
+}
+
+export async function listDisparateImpactRuns(opts?: {
+  limit?: number
+}): Promise<DisparateImpactRun[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('disparate_impact_runs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(opts?.limit ?? 50)
+  if (error) throw error
+  return (data ?? []) as DisparateImpactRun[]
+}
+
 export async function getActivePublishedCriteria(): Promise<
   TenantSelectionCriteria | null
 > {

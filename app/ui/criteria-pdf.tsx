@@ -14,6 +14,7 @@
 
 import {
   Document,
+  Image,
   Page,
   Text,
   View,
@@ -138,6 +139,7 @@ export type CriteriaPdfProps = {
   } | null
   businessEmail?: string | null
   businessPhone?: string | null
+  logoUrl?: string | null
 }
 
 function formatDate(iso: string) {
@@ -188,6 +190,7 @@ export function CriteriaPdf(props: CriteriaPdfProps) {
     businessAddress,
     businessEmail,
     businessPhone,
+    logoUrl,
   } = props
   const formattedAddress = formatBusinessAddress(businessAddress)
   const contactLine = [businessEmail, businessPhone].filter(Boolean).join(' · ')
@@ -205,6 +208,13 @@ export function CriteriaPdf(props: CriteriaPdfProps) {
               by an attorney licensed in {jurisdictionName} before applying
               it to applicants.
             </Text>
+          </View>
+        )}
+
+        {logoUrl && (
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image, not HTML img */}
+            <Image src={logoUrl} style={{ maxHeight: 48, maxWidth: 200 }} />
           </View>
         )}
 

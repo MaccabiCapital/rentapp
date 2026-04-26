@@ -170,6 +170,31 @@ export default async function CompliancePage() {
         </div>
       </section>
 
+      {/* Disparate impact tile */}
+      <section className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+          Disparate impact
+        </h2>
+        <Link
+          href="/dashboard/compliance/disparate-impact"
+          className="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:bg-zinc-50"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm font-semibold text-zinc-900">
+                Cohort analysis on every screening decision
+              </div>
+              <p className="mt-1 text-xs text-zinc-600">
+                Bias-neutral approval-rate breakdown by income, risk band,
+                and application timing. Runs nightly at 03:00 UTC. Click for
+                latest run + cohort table.
+              </p>
+            </div>
+            <span className="text-sm text-indigo-600">View →</span>
+          </div>
+        </Link>
+      </section>
+
       {/* Listing copy scanner */}
       <section className="mb-10">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
@@ -196,7 +221,19 @@ export default async function CompliancePage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
           Audit logs
         </h2>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Link
+            href="/dashboard/compliance/audit"
+            className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm hover:bg-zinc-50"
+          >
+            <div className="text-sm font-semibold text-zinc-900">
+              Compliance audit
+            </div>
+            <p className="mt-1 text-xs text-zinc-600">
+              Every listing scan, criteria publish, finding action,
+              disparate-impact run. 7-year retention.
+            </p>
+          </Link>
           <Link
             href="/dashboard/leasing-assistant/audit"
             className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm hover:bg-zinc-50"
