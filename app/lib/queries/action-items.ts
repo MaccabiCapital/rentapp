@@ -398,6 +398,49 @@ async function prospectFollowups(
   })
 }
 
+async function pendingLateFees(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+): Promise<ActionItem[]> {
+  const { data } = await supabase
+    .from('late_fee_charges')
+    .select(
+      `id, amount, applied_on,
+       lease:leases (
+         tenant:tenants ( first_name, last_name ),
+         unit:units ( unit_number, property:properties ( name ) )
+       )`,
+    )
+    .eq('status', 'pending')
+    .is('deleted_at', null)
+    .order('applied_on', { ascending: true })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (data ?? []) as any[]
+  if (rows.length === 0) return []
+
+  const totalAmount = rows.reduce((sum, r) => sum + Number(r.amount), 0)
+  const formatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(totalAmount)
+
+  // One aggregated item rather than one per fee — keeps the panel
+  // readable when there are many.
+  return [
+    {
+      id: 'late-fees-pending',
+      severity: 'warning',
+      category: 'Late fees',
+      title: `${rows.length} late fee${rows.length === 1 ? '' : 's'} owed (${formatted})`,
+      body: 'Auto-applied to overdue rent. Review, mark paid as collected, or waive.',
+      href: '/dashboard/late-fees',
+      icon: '⏱',
+      count: rows.length,
+    },
+  ]
+}
+
 async function urgentMaintenance(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -446,6 +489,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     renters,
     prospects,
     maint,
+    lateFees,
   ] = await Promise.all([
     safe(() => leasesExpiringSoon(supabase, nowMs), []),
     safe(() => vacantUnitsWithoutListing(supabase), []),
@@ -455,6 +499,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     safe(() => rentersInsuranceSignals(supabase, nowMs), []),
     safe(() => prospectFollowups(supabase, nowMs), []),
     safe(() => urgentMaintenance(supabase), []),
+    safe(() => pendingLateFees(supabase), []),
   ])
 
   const all: ActionItem[] = [
@@ -466,6 +511,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     ...renters,
     ...prospects,
     ...maint,
+    ...lateFees,
   ]
 
   return all.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity])

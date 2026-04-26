@@ -15,6 +15,8 @@ export type WorkflowLease = {
   end_date: string
   monthly_rent: number
   security_deposit: number | null
+  late_fee_amount: number | null
+  late_fee_grace_days: number | null
   tenant_notice_given_on: string | null
   signed_at: string | null
   turnover_strategy: 'list_during_notice' | 'wait_until_vacant' | null
@@ -53,6 +55,7 @@ export type WorkflowUnit = {
 
 const LEASE_SELECT = `
   id, status, start_date, end_date, monthly_rent, security_deposit,
+  late_fee_amount, late_fee_grace_days,
   tenant_notice_given_on, signed_at, turnover_strategy,
   tenant:tenants ( id, first_name, last_name, email, phone ),
   unit:units (

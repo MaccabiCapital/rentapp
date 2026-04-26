@@ -45,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: '✦',
       },
       { href: '/dashboard/rent', label: 'Rent', icon: '$' },
+      { href: '/dashboard/late-fees', label: 'Late fees', icon: '⏱' },
       { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
       {
         href: '/dashboard/renters-insurance',

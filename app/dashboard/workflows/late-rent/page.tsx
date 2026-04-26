@@ -13,8 +13,10 @@ import {
   latestNoticeForLease,
   getLeasesForWorkflowPicker,
 } from '@/app/lib/queries/workflow-context'
+import { getLateFeesForLease } from '@/app/lib/queries/late-fees'
 import { WorkflowStepCard } from '@/app/ui/workflow-step-card'
 import { WorkflowLeasePicker } from '@/app/ui/workflow-lease-picker'
+import { formatMoney } from '@/app/lib/schemas/late-fee'
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return '—'
@@ -53,10 +55,16 @@ export default async function LateRentWorkflow({
   const lease = await loadWorkflowLease(leaseId)
   if (!lease) notFound()
 
-  const [lateNotice, cureNotice] = await Promise.all([
+  const [lateNotice, cureNotice, lateFees] = await Promise.all([
     latestNoticeForLease(leaseId, 'late_rent'),
     latestNoticeForLease(leaseId, 'cure_or_quit'),
+    getLateFeesForLease(leaseId),
   ])
+
+  const pendingLateFees = lateFees.filter((f) => f.status === 'pending')
+  const pendingTotal = pendingLateFees.reduce((s, f) => s + f.amount, 0)
+  const hasLateFeeConfig =
+    lease.late_fee_amount !== null && lease.late_fee_amount > 0
 
   const tenantName = lease.tenant
     ? `${lease.tenant.first_name} ${lease.tenant.last_name}`.trim()
@@ -97,6 +105,36 @@ export default async function LateRentWorkflow({
       <div className="space-y-3">
         <WorkflowStepCard
           stepNumber={1}
+          title="Late fees on the unpaid period"
+          description={
+            !hasLateFeeConfig
+              ? 'No late fee is configured on this lease — auto-scan won’t apply any. Set the late fee amount + grace days on the lease record so this kicks in automatically next time.'
+              : pendingLateFees.length > 0
+                ? `${pendingLateFees.length} late fee${pendingLateFees.length === 1 ? '' : 's'} owed (${formatMoney(pendingTotal)}). Auto-applied per the lease config; review, mark paid, or waive in the Late fees module.`
+                : `No late fees pending. The auto-scan applies fees daily once a rent schedule passes its grace period. Lease is configured: ${formatMoney(lease.late_fee_amount)} after ${lease.late_fee_grace_days ?? 5} grace days.`
+          }
+          status={
+            !hasLateFeeConfig
+              ? 'ready'
+              : pendingLateFees.length > 0
+                ? 'ready'
+                : 'done'
+          }
+          doneSummary={
+            hasLateFeeConfig && pendingLateFees.length === 0
+              ? 'No fees pending'
+              : undefined
+          }
+          actionHref={
+            hasLateFeeConfig
+              ? '/dashboard/late-fees'
+              : `/dashboard/tenants/${lease.tenant?.id ?? ''}/leases/${lease.id}`
+          }
+          actionLabel={hasLateFeeConfig ? 'Open late fees' : 'Configure on lease'}
+        />
+
+        <WorkflowStepCard
+          stepNumber={2}
           title="Send a late-rent reminder"
           description="Friendly first reminder — names the amount, late fee (if any), and total owed. Lower stakes than a pay-or-quit. Many states don't require this but it's the right move for a tenant who might just be forgetful."
           status={lateNotice ? 'done' : 'ready'}
@@ -116,7 +154,7 @@ export default async function LateRentWorkflow({
         />
 
         <WorkflowStepCard
-          stepNumber={2}
+          stepNumber={3}
           title="Wait the grace period"
           description={`Give the tenant the chance to pay. Your lease's grace period is typically 3–5 days after the due date. Escalate only after.${
             lease.unit?.property?.state
@@ -135,7 +173,7 @@ export default async function LateRentWorkflow({
         />
 
         <WorkflowStepCard
-          stepNumber={3}
+          stepNumber={4}
           title="Issue a pay-or-quit notice"
           description="Formal demand: pay the full amount by a state-specific deadline, or vacate. Required before eviction proceedings in almost every state."
           status={cureNotice ? 'done' : 'ready'}
@@ -157,7 +195,7 @@ export default async function LateRentWorkflow({
         />
 
         <WorkflowStepCard
-          stepNumber={4}
+          stepNumber={5}
           title="After the cure deadline"
           description={
             cureDeadlinePassed
