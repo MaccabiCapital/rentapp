@@ -9,6 +9,13 @@ import Link from 'next/link'
 
 const SETTINGS_ITEMS = [
   {
+    href: '/dashboard/settings/company',
+    title: 'Company',
+    description:
+      'Business name + logo + mailing address + default policies. Used on every generated document.',
+    icon: '◉',
+  },
+  {
     href: '/dashboard/settings/sms',
     title: 'SMS support line',
     description:

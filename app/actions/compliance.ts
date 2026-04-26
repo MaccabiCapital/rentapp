@@ -425,7 +425,22 @@ async function renderAndStorePdf(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const version = ((lastRow as any)?.version ?? 0) || 1
 
+  // Pull company profile so the PDF uses the configured business
+  // name + mailing address instead of falling back to user metadata.
+  const { data: profileRow } = await supabase
+    .from('landlord_settings')
+    .select(
+      `company_name, business_email, business_phone,
+       business_street_address, business_unit, business_city,
+       business_state, business_postal_code`,
+    )
+    .eq('owner_id', user.id)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profile = profileRow as any
+
   const landlordName =
+    profile?.company_name ??
     (user.user_metadata?.full_name as string | undefined) ??
     user.email ??
     'Landlord'
@@ -439,6 +454,17 @@ async function renderAndStorePdf(
     version,
     generatedOn: new Date().toISOString().slice(0, 10),
     landlordName,
+    businessAddress: profile
+      ? {
+          street: profile.business_street_address ?? null,
+          unit: profile.business_unit ?? null,
+          city: profile.business_city ?? null,
+          state: profile.business_state ?? null,
+          postal_code: profile.business_postal_code ?? null,
+        }
+      : null,
+    businessEmail: profile?.business_email ?? null,
+    businessPhone: profile?.business_phone ?? null,
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfBuffer = await renderToBuffer(pdfElement as any)
