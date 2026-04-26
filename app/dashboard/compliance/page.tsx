@@ -14,20 +14,36 @@ import {
 import {
   listFindings,
   countOpenFindingsBySeverity,
+  getActivePublishedCriteria,
 } from '@/app/lib/queries/compliance'
 import { ComplianceDisclaimer } from '@/app/ui/compliance-disclaimer'
 import { StateRuleCard } from '@/app/ui/state-rule-card'
 import { ListingCopyScanner } from '@/app/ui/listing-copy-scanner'
 import { ComplianceFindingRow } from '@/app/ui/compliance-finding-row'
 
+function formatDate(iso: string | null) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 export default async function CompliancePage() {
-  const [allRules, portfolioStates, openFindings, findingsCounts] =
-    await Promise.all([
-      getAllStateRules(),
-      getStatesInPortfolio(),
-      listFindings({ status: 'open', limit: 50 }),
-      countOpenFindingsBySeverity(),
-    ])
+  const [
+    allRules,
+    portfolioStates,
+    openFindings,
+    findingsCounts,
+    activeCriteria,
+  ] = await Promise.all([
+    getAllStateRules(),
+    getStatesInPortfolio(),
+    listFindings({ status: 'open', limit: 50 }),
+    countOpenFindingsBySeverity(),
+    getActivePublishedCriteria(),
+  ])
 
   const portfolioSet = new Set(portfolioStates)
   const myStatesRules = allRules.filter((r) => portfolioSet.has(r.state))
@@ -51,6 +67,81 @@ export default async function CompliancePage() {
       <div className="mb-8">
         <ComplianceDisclaimer />
       </div>
+
+      {/* Active tenant selection criteria — lawsuit-shield artifact */}
+      <section className="mb-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">
+          Active tenant selection criteria
+        </h2>
+        {activeCriteria ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-zinc-900">
+                    {activeCriteria.name}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                    Published
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-emerald-800">
+                  {activeCriteria.jurisdiction} · published{' '}
+                  {formatDate(activeCriteria.published_at)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeCriteria.pdf_storage_path && (
+                  <a
+                    href={`/dashboard/compliance/criteria/${activeCriteria.id}/pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                  >
+                    Download PDF
+                  </a>
+                )}
+                <Link
+                  href={`/dashboard/compliance/criteria/${activeCriteria.id}`}
+                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+                >
+                  View / edit
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-base font-semibold text-amber-900">
+                  No published criteria yet
+                </div>
+                <p className="mt-1 text-sm text-amber-800">
+                  Required for the fair-housing safe-harbor argument. Create
+                  your tenant selection criteria, publish to lock the
+                  version, and download the PDF as your lawsuit-shield
+                  artifact.
+                </p>
+              </div>
+              <Link
+                href="/dashboard/compliance/criteria/new"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              >
+                Create criteria
+              </Link>
+            </div>
+          </div>
+        )}
+        <div className="mt-2 text-right">
+          <Link
+            href="/dashboard/compliance/criteria"
+            className="text-xs text-indigo-600 hover:text-indigo-700"
+          >
+            All criteria documents →
+          </Link>
+        </div>
+      </section>
 
       {/* Open findings tile */}
       <section className="mb-10">

@@ -272,3 +272,68 @@ export const DismissFindingSchema = z.object({
     .max(500),
 })
 export type DismissFindingInput = z.infer<typeof DismissFindingSchema>
+
+// ------------------------------------------------------------
+// Tenant Selection Criteria — create + update form schema
+// ------------------------------------------------------------
+//
+// Used by both the create and update actions. Numeric fields
+// arrive as strings from FormData and are coerced. Empty strings
+// become null (vs. undefined) so we can distinguish "cleared
+// the field" from "didn't change it."
+
+const optionalIntPositive = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) =>
+    v === undefined || v === '' ? null : Number(v),
+  )
+  .refine((v) => v === null || (Number.isInteger(v) && v >= 0), {
+    error: 'Must be a non-negative integer.',
+  })
+
+const checkboxToBoolNullable = z
+  .string()
+  .optional()
+  .transform((v) => {
+    if (v === undefined) return null
+    if (v === 'true' || v === 'on' || v === '1') return true
+    if (v === 'false' || v === '0') return false
+    return null
+  })
+
+export const CriteriaUpsertSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: 'Name is required.' })
+    .max(200),
+  jurisdiction: z
+    .string()
+    .trim()
+    .min(2, { error: 'Pick a jurisdiction.' })
+    .max(2),
+  income_multiple: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === undefined || v === '' ? null : Number(v)))
+    .refine((v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 10), {
+      error: 'Income multiple must be between 0 and 10.',
+    }),
+  min_credit_score: optionalIntPositive.refine(
+    (v) => v === null || (v >= 300 && v <= 850),
+    { error: 'Credit score must be between 300 and 850.' },
+  ),
+  max_evictions_lookback_years: optionalIntPositive,
+  max_eviction_count: optionalIntPositive,
+  accepts_section_8: checkboxToBoolNullable,
+  accepts_other_vouchers: checkboxToBoolNullable,
+  criminal_history_lookback_years: optionalIntPositive,
+  pet_policy: optionalText,
+  occupancy_max_per_bedroom: optionalIntPositive,
+  additional_requirements: optionalText,
+  reasonable_accommodations_statement: optionalText,
+})
+export type CriteriaUpsertInput = z.infer<typeof CriteriaUpsertSchema>
