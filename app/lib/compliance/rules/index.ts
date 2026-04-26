@@ -5,24 +5,24 @@
 // loadRulePack(jurisdiction) returns the federal baseline merged
 // with state add-ons. Throws if the jurisdiction isn't supported.
 //
-// Currently with state-specific rules: CA, NY, MI.
-// Federal-baseline-only fallback: TX, FL, WA (rule files in a
-// follow-up commit).
+// State-specific rules: CA, NY, MI, TX, FL, WA.
 
 import type { RulePack, ListingScanRule } from './_types'
 import { FEDERAL_LISTING_RULES } from './_federal'
 import { CALIFORNIA_LISTING_RULES } from './ca'
 import { NEW_YORK_LISTING_RULES } from './ny'
 import { MICHIGAN_LISTING_RULES } from './mi'
+import { TEXAS_LISTING_RULES } from './tx'
+import { FLORIDA_LISTING_RULES } from './fl'
+import { WASHINGTON_LISTING_RULES } from './wa'
 
 const STATE_LISTING_RULES: Record<string, ListingScanRule[]> = {
   CA: CALIFORNIA_LISTING_RULES,
   NY: NEW_YORK_LISTING_RULES,
   MI: MICHIGAN_LISTING_RULES,
-  // TX, FL, WA: federal baseline only for v1
-  TX: [],
-  FL: [],
-  WA: [],
+  TX: TEXAS_LISTING_RULES,
+  FL: FLORIDA_LISTING_RULES,
+  WA: WASHINGTON_LISTING_RULES,
 }
 
 const JURISDICTION_NAMES: Record<string, string> = {

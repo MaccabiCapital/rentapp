@@ -78,6 +78,12 @@ export default async function MaintenancePage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-zinc-900">Maintenance</h1>
+        <Link
+          href="/dashboard/maintenance/recurring"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+        >
+          Recurring tasks →
+        </Link>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-2">

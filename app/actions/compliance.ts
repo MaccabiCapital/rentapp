@@ -218,6 +218,116 @@ export async function dismissFinding(
 }
 
 // ------------------------------------------------------------
+// Apply-suggestion writeback (listing scanner)
+// ------------------------------------------------------------
+//
+// For listing-scan findings with a subject_listing_id, this rewrites
+// the listing's description to remove the trigger phrase and marks
+// the finding as fixed. Confirmation modal lives in the UI.
+//
+// Strategy: replace the exact trigger_text occurrence with the
+// suggested_fix where available; otherwise replace with a placeholder
+// "[removed for fair-housing compliance]". A future v2 can offer
+// inline editing of the rewrite before applying.
+
+export async function applyListingSuggestion(
+  findingId: string,
+): Promise<ActionState> {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, message: 'Sign in.' }
+
+  const { data: finding } = await supabase
+    .from('compliance_findings')
+    .select(
+      'id, owner_id, source, subject_listing_id, trigger_text, suggested_fix',
+    )
+    .eq('id', findingId)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const f = finding as any
+  if (!f || f.owner_id !== user.id) {
+    return { success: false, message: 'Finding not found.' }
+  }
+  if (f.source !== 'listing_scan' || !f.subject_listing_id) {
+    return {
+      success: false,
+      message: 'This finding is not on a listing — apply not supported.',
+    }
+  }
+  if (!f.trigger_text) {
+    return {
+      success: false,
+      message: 'No trigger phrase to replace.',
+    }
+  }
+
+  // Pull the listing
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id, owner_id, description')
+    .eq('id', f.subject_listing_id)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const l = listing as any
+  if (!l || l.owner_id !== user.id) {
+    return { success: false, message: 'Listing not found.' }
+  }
+  const original: string = (l.description as string | null) ?? ''
+  if (!original.toLowerCase().includes(f.trigger_text.toLowerCase())) {
+    // Description may have been edited since the scan
+    return {
+      success: false,
+      message:
+        "Couldn't find the flagged phrase in the current listing — it may have already been edited. Re-run the scan.",
+    }
+  }
+
+  // Replace case-insensitively, preserving surrounding whitespace
+  const escaped = (f.trigger_text as string).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&',
+  )
+  const re = new RegExp(escaped, 'gi')
+  const rewritten = original.replace(
+    re,
+    '[removed for fair-housing compliance]',
+  )
+
+  const { error: updErr } = await supabase
+    .from('listings')
+    .update({ description: rewritten })
+    .eq('id', f.subject_listing_id)
+  if (updErr) return { success: false, message: updErr.message }
+
+  // Mark the finding fixed
+  await supabase
+    .from('compliance_findings')
+    .update({ status: 'fixed' })
+    .eq('id', findingId)
+
+  await supabase.from('compliance_audit_log').insert({
+    owner_id: user.id,
+    finding_id: findingId,
+    event: 'finding_fixed',
+    event_data: {
+      method: 'apply_listing_suggestion',
+      listing_id: f.subject_listing_id,
+      replaced_text: f.trigger_text,
+    },
+    actor_user_id: user.id,
+    actor_kind: 'landlord',
+  })
+
+  revalidatePath('/dashboard/compliance')
+  revalidatePath('/dashboard/compliance/findings')
+  revalidatePath(`/dashboard/listings/${f.subject_listing_id}`)
+  return { success: true }
+}
+
+// ------------------------------------------------------------
 // Tenant Selection Criteria — create / update / publish / PDF
 // ------------------------------------------------------------
 

@@ -14,6 +14,7 @@ import {
   acknowledgeFinding,
   markFindingFixed,
   dismissFinding,
+  applyListingSuggestion,
 } from '@/app/actions/compliance'
 import { emptyActionState } from '@/app/lib/types'
 import {
@@ -63,6 +64,27 @@ export function ComplianceFindingRow({ finding }: { finding: ComplianceFinding }
       }
     })
   }
+
+  function callApply() {
+    if (
+      !confirm(
+        'Replace the flagged phrase in the listing with "[removed for fair-housing compliance]"? This edits live listing copy.',
+      )
+    )
+      return
+    setError(null)
+    startTransition(async () => {
+      const result = await applyListingSuggestion(finding.id)
+      if (result.success === false && 'message' in result) {
+        setError(result.message ?? 'Failed.')
+      }
+    })
+  }
+
+  const canApplyToListing =
+    finding.source === 'listing_scan' &&
+    finding.subject_listing_id !== null &&
+    finding.trigger_text !== null
 
   const isOpen = finding.status === 'open'
   const isTerminal =
@@ -127,6 +149,16 @@ export function ComplianceFindingRow({ finding }: { finding: ComplianceFinding }
 
         {isOpen && !showDismiss && (
           <div className="flex flex-wrap items-center gap-2">
+            {canApplyToListing && (
+              <button
+                type="button"
+                onClick={callApply}
+                disabled={isPending}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Apply suggestion (rewrite listing)
+              </button>
+            )}
             <button
               type="button"
               onClick={callAck}

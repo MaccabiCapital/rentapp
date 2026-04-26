@@ -518,6 +518,80 @@ async function urgentMaintenance(
   })
 }
 
+async function recurringMaintenanceDue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+): Promise<ActionItem[]> {
+  const today = new Date().toISOString().slice(0, 10)
+  const { data } = await supabase
+    .from('recurring_maintenance_tasks')
+    .select(
+      `id, title, next_due_date, lead_time_days,
+       property:properties ( name ),
+       unit:units ( unit_number, property:properties ( name ) )`,
+    )
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .lte('next_due_date', today) // overdue
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const overdueRows = (data ?? []) as any[]
+
+  // Also pull active tasks within their lead-time window
+  const { data: dataSoon } = await supabase
+    .from('recurring_maintenance_tasks')
+    .select(
+      `id, title, next_due_date, lead_time_days,
+       property:properties ( name ),
+       unit:units ( unit_number, property:properties ( name ) )`,
+    )
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .gt('next_due_date', today)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const soonRows = ((dataSoon ?? []) as any[]).filter((r) => {
+    const days = Math.floor(
+      (new Date(r.next_due_date + 'T00:00:00Z').getTime() -
+        new Date(today + 'T00:00:00Z').getTime()) /
+        (1000 * 60 * 60 * 24),
+    )
+    return days <= r.lead_time_days
+  })
+
+  const items: ActionItem[] = []
+  // Overdue ones get individual entries (they need attention)
+  for (const r of overdueRows.slice(0, 5)) {
+    const where = r.property?.name
+      ? r.property.name
+      : r.unit
+        ? `${r.unit.property?.name ?? 'Property'} · ${r.unit.unit_number ?? 'Unit'}`
+        : ''
+    items.push({
+      id: `recur-overdue-${r.id}`,
+      severity: 'urgent',
+      category: 'Recurring maintenance',
+      title: `Overdue: ${r.title}`,
+      body: `${where} — was due ${r.next_due_date}. Mark complete or reschedule.`,
+      href: `/dashboard/maintenance/recurring/${r.id}`,
+      icon: '⏱',
+    })
+  }
+  // Coming-up ones: aggregate into a single tile
+  if (soonRows.length > 0) {
+    items.push({
+      id: 'recur-soon',
+      severity: 'warning',
+      category: 'Recurring maintenance',
+      title: `${soonRows.length} recurring task${soonRows.length === 1 ? '' : 's'} due soon`,
+      body: 'Within the lead-time window. Schedule the vendor before they go overdue.',
+      href: '/dashboard/maintenance/recurring',
+      icon: '⏱',
+      count: soonRows.length,
+    })
+  }
+  return items
+}
+
 // ------------------------------------------------------------
 // Public entrypoint
 // ------------------------------------------------------------
@@ -537,6 +611,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     maint,
     lateFees,
     screening,
+    recurMaint,
   ] = await Promise.all([
     safe(() => leasesExpiringSoon(supabase, nowMs), []),
     safe(() => vacantUnitsWithoutListing(supabase), []),
@@ -548,6 +623,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     safe(() => urgentMaintenance(supabase), []),
     safe(() => pendingLateFees(supabase), []),
     safe(() => screeningReviewsWaiting(supabase), []),
+    safe(() => recurringMaintenanceDue(supabase), []),
   ])
 
   const all: ActionItem[] = [
@@ -561,6 +637,7 @@ export async function getActionItems(): Promise<ActionItem[]> {
     ...maint,
     ...lateFees,
     ...screening,
+    ...recurMaint,
   ]
 
   return all.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity])
