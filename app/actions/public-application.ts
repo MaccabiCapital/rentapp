@@ -9,11 +9,21 @@
 // isn't authenticated. Validates the listing slug, resolves the
 // unit + owner, then creates a prospect with stage
 // 'application_received' and the application details in notes.
+//
+// If the applicant uploaded supporting documents (pay stubs,
+// bank statements, employer letter, ID), persist each as an
+// application_documents row + storage object, scoped to the
+// landlord's owner_id and the new prospect_id.
 
 import { getServiceRoleClient } from '@/lib/supabase/service-role'
+import { uploadApplicationDocumentPublic } from '@/app/lib/storage/application-documents'
+import {
+  APPLICATION_DOCUMENT_KIND_VALUES,
+  type ApplicationDocumentKind,
+} from '@/app/lib/schemas/screening'
 
 export type PublicApplicationResult =
-  | { success: true; prospectId: string }
+  | { success: true; prospectId: string; documentsUploaded: number }
   | { success: false; message: string }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -129,5 +139,37 @@ export async function submitApplication(
     }
   }
 
-  return { success: true, prospectId: created.id }
+  // Persist any uploaded documents. Each kind has its own form
+  // field name like 'document_pay_stub'. Failures don't block the
+  // application — the prospect is already created; documents can
+  // be re-uploaded by the landlord later.
+  let documentsUploaded = 0
+  for (const kind of APPLICATION_DOCUMENT_KIND_VALUES) {
+    const fileEntry = formData.get(`document_${kind}`)
+    if (!(fileEntry instanceof File) || fileEntry.size === 0) continue
+
+    const upload = await uploadApplicationDocumentPublic({
+      ownerId: l.owner_id,
+      prospectId: created.id,
+      kind: kind as ApplicationDocumentKind,
+      file: fileEntry,
+    })
+    if (!upload.success) continue
+
+    const { error: docErr } = await supabase
+      .from('application_documents')
+      .insert({
+        owner_id: l.owner_id,
+        prospect_id: created.id,
+        public_application_token: null,
+        kind,
+        storage_path: upload.storagePath,
+        original_filename: fileEntry.name,
+        byte_size: upload.byteSize,
+        mime_type: upload.mimeType,
+      })
+    if (!docErr) documentsUploaded += 1
+  }
+
+  return { success: true, prospectId: created.id, documentsUploaded }
 }

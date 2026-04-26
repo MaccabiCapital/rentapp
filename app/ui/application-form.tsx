@@ -21,6 +21,8 @@ export function ApplicationForm({ slug }: { slug: string }) {
   >(submitApplication, INITIAL_STATE)
 
   if (state.success) {
+    const docs =
+      'documentsUploaded' in state ? state.documentsUploaded : 0
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-8 text-center">
         <div className="text-3xl">🎉</div>
@@ -31,6 +33,11 @@ export function ApplicationForm({ slug }: { slug: string }) {
           Thanks — the landlord will review your application and reach out
           within 1–3 business days. Keep an eye on your email and phone.
         </p>
+        {docs > 0 && (
+          <p className="mt-2 text-xs text-emerald-700">
+            {docs} document{docs === 1 ? '' : 's'} uploaded with your application.
+          </p>
+        )}
         <Link
           href="/"
           className="mt-4 inline-block text-sm text-emerald-700 hover:text-emerald-900 hover:underline"
@@ -112,6 +119,32 @@ export function ApplicationForm({ slug }: { slug: string }) {
         />
       </Section>
 
+      <Section title="Supporting documents (optional)">
+        <p className="text-xs text-zinc-600">
+          Upload anything that helps verify your application. Common: a
+          recent pay stub, the last 1-2 months of bank statements, an
+          employer letter, and a photo ID. PDFs or images, up to 10 MB
+          each. All optional — you can skip any field.
+        </p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <FileField label="Most recent pay stub" name="document_pay_stub" />
+          <FileField
+            label="Bank statement"
+            name="document_bank_statement"
+          />
+          <FileField
+            label="Employment / offer letter"
+            name="document_employment_letter"
+          />
+          <FileField label="Photo ID" name="document_photo_id" />
+          <FileField
+            label="Most recent tax return (if self-employed)"
+            name="document_tax_return"
+          />
+          <FileField label="Reference letter" name="document_reference_letter" />
+        </div>
+      </Section>
+
       <Section title="Anything else to share?">
         <textarea
           name="additional_notes"
@@ -163,6 +196,23 @@ function Section({
     <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <h3 className="mb-3 text-sm font-semibold text-zinc-900">{title}</h3>
       <div className="space-y-3">{children}</div>
+    </div>
+  )
+}
+
+function FileField({ label, name }: { label: string; name: string }) {
+  return (
+    <div>
+      <label htmlFor={name} className="block text-xs font-medium text-zinc-700">
+        {label}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+        className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:font-medium file:text-zinc-700 hover:file:bg-zinc-200"
+      />
     </div>
   )
 }
