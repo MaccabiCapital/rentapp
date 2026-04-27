@@ -21,6 +21,12 @@ export default async function Home() {
           </div>
           <nav className="flex items-center gap-4 text-sm font-medium">
             <Link
+              href="/pricing"
+              className="text-slate-600 hover:text-slate-900"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/sign-in"
               className="text-slate-600 hover:text-slate-900"
             >

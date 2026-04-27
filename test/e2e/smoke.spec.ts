@@ -51,6 +51,8 @@ const WORKFLOW_PATHS = [
 ]
 
 const PUBLIC_PATHS = [
+  { label: 'Landing', path: '/' },
+  { label: 'Pricing', path: '/pricing' },
   { label: 'Sign in', path: '/sign-in' },
   { label: 'Sign up', path: '/sign-up' },
   { label: 'Lease sign (invalid token)', path: '/lease-sign/invalid-token-test' },
