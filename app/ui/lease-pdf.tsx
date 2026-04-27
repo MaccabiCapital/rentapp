@@ -18,12 +18,20 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from '@react-pdf/renderer'
 import type { Lease } from '@/app/lib/schemas/lease'
 import type { Tenant } from '@/app/lib/schemas/tenant'
 import type { Property } from '@/app/lib/schemas/property'
 import type { Unit } from '@/app/lib/schemas/unit'
+
+export type LeasePdfSignature = {
+  imageDataUrl: string | null
+  typedName: string | null
+  signedAt: string | null
+  signedIp: string | null
+}
 
 const styles = StyleSheet.create({
   page: {
@@ -113,7 +121,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
   signatureBlock: {
-    marginTop: 40,
+    marginTop: 32,
     flexDirection: 'row',
     gap: 32,
   },
@@ -125,9 +133,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 32,
   },
+  signatureImage: {
+    height: 56,
+    marginBottom: 2,
+    objectFit: 'contain',
+    objectPositionX: 0,
+  },
+  signatureImageLine: {
+    borderBottom: '1pt solid #171717',
+    marginBottom: 4,
+  },
   signatureLabel: {
     fontSize: 9,
     color: '#6b7280',
+  },
+  signatureCaption: {
+    fontSize: 8,
+    color: '#374151',
+    marginTop: 4,
+    lineHeight: 1.3,
+  },
+  signatureBadge: {
+    fontSize: 7,
+    color: '#065f46',
+    marginTop: 2,
   },
   footer: {
     position: 'absolute',
@@ -160,12 +189,28 @@ function formatDate(value: string | null): string {
   })
 }
 
+function formatDateTime(value: string | null): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
 export type LeasePdfProps = {
   lease: Lease
   tenant: Tenant
   unit: Unit
   property: Property
   generatedOn: string
+  signatures?: {
+    tenant: LeasePdfSignature | null
+    landlord: LeasePdfSignature | null
+  }
 }
 
 export function LeasePdf({
@@ -174,7 +219,10 @@ export function LeasePdf({
   unit,
   property,
   generatedOn,
+  signatures,
 }: LeasePdfProps) {
+  const tenantSig = signatures?.tenant ?? null
+  const landlordSig = signatures?.landlord ?? null
   const unitLabel = unit.unit_number
     ? `${property.name} · Unit ${unit.unit_number}`
     : property.name
@@ -327,14 +375,16 @@ export function LeasePdf({
 
         {/* Signature block */}
         <View style={styles.signatureBlock}>
-          <View style={styles.signatureBox}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureLabel}>Tenant signature / date</Text>
-          </View>
-          <View style={styles.signatureBox}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureLabel}>Landlord signature / date</Text>
-          </View>
+          <SignatureColumn
+            label="Tenant signature / date"
+            signature={tenantSig}
+            fallbackName={tenantFullName}
+          />
+          <SignatureColumn
+            label="Landlord signature / date"
+            signature={landlordSig}
+            fallbackName={null}
+          />
         </View>
 
         {/* Footer */}
@@ -345,5 +395,52 @@ export function LeasePdf({
         </Text>
       </Page>
     </Document>
+  )
+}
+
+function SignatureColumn({
+  label,
+  signature,
+  fallbackName,
+}: {
+  label: string
+  signature: LeasePdfSignature | null
+  fallbackName: string | null
+}) {
+  const isSigned =
+    !!signature?.imageDataUrl && !!signature.signedAt
+  const displayName =
+    signature?.typedName ?? fallbackName ?? null
+
+  if (!isSigned) {
+    return (
+      <View style={styles.signatureBox}>
+        <View style={styles.signatureLine} />
+        <Text style={styles.signatureLabel}>{label}</Text>
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.signatureBox}>
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image, not html */}
+      <Image
+        src={signature!.imageDataUrl!}
+        style={styles.signatureImage}
+      />
+      <View style={styles.signatureImageLine} />
+      <Text style={styles.signatureLabel}>{label}</Text>
+      {displayName && (
+        <Text style={styles.signatureCaption}>{displayName}</Text>
+      )}
+      <Text style={styles.signatureCaption}>
+        Signed {formatDateTime(signature!.signedAt)}
+      </Text>
+      {signature!.signedIp && (
+        <Text style={styles.signatureBadge}>
+          Electronically signed · IP {signature!.signedIp}
+        </Text>
+      )}
+    </View>
   )
 }

@@ -87,6 +87,26 @@ export async function getSignedSignatureUrl(
   return data.signedUrl
 }
 
+// Service-role byte download. Caller must have already verified
+// ownership of the lease the signature belongs to (e.g. via the
+// session-client lease query going through RLS) — this function
+// itself bypasses RLS and just reads the object.
+export async function downloadSignatureBytes(
+  storagePath: string,
+): Promise<Uint8Array | null> {
+  const supabase = getServiceRoleClient()
+  const { data, error } = await supabase.storage
+    .from(LEASE_SIGNATURES_BUCKET)
+    .download(storagePath)
+  if (error || !data) return null
+  const buf = await data.arrayBuffer()
+  return new Uint8Array(buf)
+}
+
+export function bytesToPngDataUrl(bytes: Uint8Array): string {
+  return `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`
+}
+
 // Convert "data:image/png;base64,XXXX" to bytes.
 export function dataUrlToBytes(dataUrl: string): Uint8Array {
   const base64 = dataUrl.split(',', 2)[1] ?? ''

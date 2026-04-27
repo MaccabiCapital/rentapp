@@ -11,7 +11,16 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createServerClient } from '@/lib/supabase/server'
 import { getLeaseWithRelations } from '@/app/lib/queries/leases'
-import { LeasePdf } from '@/app/ui/lease-pdf'
+import { getLeaseSignatureSet } from '@/app/lib/queries/lease-signatures'
+import {
+  bytesToPngDataUrl,
+  downloadSignatureBytes,
+} from '@/app/lib/storage/lease-signatures'
+import {
+  LeasePdf,
+  type LeasePdfSignature,
+} from '@/app/ui/lease-pdf'
+import type { LeaseSignature } from '@/app/lib/schemas/lease-signature'
 
 export async function GET(
   _request: Request,
@@ -48,6 +57,16 @@ export async function GET(
     return new NextResponse('Property not found', { status: 404 })
   }
 
+  // Load executed signatures (if any) so they stamp into the PDF.
+  // getLeaseSignatureSet runs through the session client, so RLS
+  // gates this to the lease owner. The downloaded PNG bytes are
+  // re-encoded as base64 data URLs so react-pdf can embed them.
+  const signatureSet = await getLeaseSignatureSet(leaseId)
+  const [tenantSig, landlordSig] = await Promise.all([
+    toEmbeddedSignature(signatureSet.tenant),
+    toEmbeddedSignature(signatureSet.landlord),
+  ])
+
   const pdf = await renderToBuffer(
     <LeasePdf
       lease={lease}
@@ -55,6 +74,7 @@ export async function GET(
       unit={lease.unit}
       property={property}
       generatedOn={new Date().toISOString().slice(0, 10)}
+      signatures={{ tenant: tenantSig, landlord: landlordSig }}
     />,
   )
 
@@ -70,4 +90,23 @@ export async function GET(
       'Cache-Control': 'no-store',
     },
   })
+}
+
+async function toEmbeddedSignature(
+  row: LeaseSignature | null,
+): Promise<LeasePdfSignature | null> {
+  if (!row || row.status !== 'signed') return null
+
+  let imageDataUrl: string | null = null
+  if (row.signature_image_path) {
+    const bytes = await downloadSignatureBytes(row.signature_image_path)
+    if (bytes) imageDataUrl = bytesToPngDataUrl(bytes)
+  }
+
+  return {
+    imageDataUrl,
+    typedName: row.typed_name,
+    signedAt: row.signed_at,
+    signedIp: row.signed_ip,
+  }
 }
