@@ -5,12 +5,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getLeaseWithRelations } from '@/app/lib/queries/leases'
+import { getLeaseSignatureSet } from '@/app/lib/queries/lease-signatures'
 import { now } from '@/app/lib/now'
 import { LeaseStatusBadge } from '@/app/ui/lease-status-badge'
 import { TerminateLeaseButton } from '@/app/ui/terminate-lease-button'
 import { DeleteLeaseButton } from '@/app/ui/delete-lease-button'
 import { TenantNoticeButton } from '@/app/ui/tenant-notice-button'
 import { StartRenewalButton } from '@/app/ui/start-renewal-button'
+import { LeaseSignaturePanel } from '@/app/ui/lease-signature-panel'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -36,12 +38,17 @@ export default async function LeaseDetailPage({
   params: Promise<{ id: string; leaseId: string }>
 }) {
   const { id, leaseId } = await params
-  const lease = await getLeaseWithRelations(leaseId)
+  const [lease, signatureSet] = await Promise.all([
+    getLeaseWithRelations(leaseId),
+    getLeaseSignatureSet(leaseId),
+  ])
   if (!lease || lease.tenant.id !== id) notFound()
 
   const nowMs = now()
   const tenantName = `${lease.tenant.first_name} ${lease.tenant.last_name}`
   const unitLabel = lease.unit.unit_number ?? `Unit ${lease.unit.id.slice(0, 8)}`
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
   return (
     <div>
@@ -170,6 +177,14 @@ export default async function LeaseDetailPage({
         <DetailRow label="Signed" value={formatDate(lease.signed_at)} />
         <DetailRow label="Notes" value={lease.notes} />
       </dl>
+
+      <LeaseSignaturePanel
+        leaseId={leaseId}
+        tenant={signatureSet.tenant}
+        landlord={signatureSet.landlord}
+        bothSigned={signatureSet.bothSigned}
+        appUrl={appUrl}
+      />
 
       {lease.status === 'draft' && (
         <div className="mt-6 flex justify-end">
