@@ -18,6 +18,8 @@ type NavGroup = {
   items: NavItem[]
 }
 
+// Daily-flow nav: 9 items that cover the typical landlord day.
+// Anything else lives behind "More" — see MORE_GROUPS below.
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
@@ -31,9 +33,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/dashboard/properties', label: 'Properties', icon: '▦' },
       { href: '/dashboard/listings', label: 'Listings', icon: '◎' },
-      { href: '/dashboard/inspections', label: 'Inspections', icon: '☐' },
-      { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
-      { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
     ],
   },
   {
@@ -41,12 +40,34 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/dashboard/tenants', label: 'Tenants', icon: '◉' },
       { href: '/dashboard/prospects', label: 'Prospects', icon: '→' },
-      {
-        href: '/dashboard/leasing-assistant',
-        label: 'Leasing assistant',
-        icon: '✦',
-      },
       { href: '/dashboard/rent', label: 'Rent', icon: '$' },
+    ],
+  },
+]
+
+// Settings always pinned to the bottom of the sidebar above the
+// user/sign-out block, so it's always reachable without expanding
+// "More".
+const SETTINGS_ITEM: NavItem = {
+  href: '/dashboard/settings',
+  label: 'Settings',
+  icon: '⚐',
+}
+
+// Collapsed by default. Grouped inside the "More" disclosure so
+// the layout doesn't dump 13 links at once when expanded.
+const MORE_GROUPS: NavGroup[] = [
+  {
+    heading: 'Property care',
+    items: [
+      { href: '/dashboard/inspections', label: 'Inspections', icon: '☐' },
+      { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
+      { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
+    ],
+  },
+  {
+    heading: 'Tenant lifecycle',
+    items: [
       { href: '/dashboard/late-fees', label: 'Late fees', icon: '⏱' },
       { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
       {
@@ -63,13 +84,17 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    heading: 'Operations',
+    heading: 'Assistants & ops',
     items: [
+      {
+        href: '/dashboard/leasing-assistant',
+        label: 'Leasing assistant',
+        icon: '✦',
+      },
       { href: '/dashboard/reports', label: 'Reports', icon: '📊' },
       { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
       { href: '/dashboard/team', label: 'My Team', icon: '◈' },
       { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
-      { href: '/dashboard/settings', label: 'Settings', icon: '⚐' },
     ],
   },
 ]
@@ -108,31 +133,63 @@ export default async function DashboardLayout({
   const displayName =
     (user.user_metadata?.full_name as string | undefined) ?? user.email ?? ''
 
-  function renderNavGroups(linkClass: string) {
-    return NAV_GROUPS.map((group, gi) => (
-      <div key={gi} className={gi === 0 ? '' : 'pt-4'}>
-        {group.heading && (
-          <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {group.heading}
-          </div>
+  function renderItem(item: NavItem, linkClass: string) {
+    return (
+      <Link key={item.href} href={item.href} className={linkClass}>
+        <span className="w-4 text-center text-slate-400">{item.icon}</span>
+        <span className="flex-1">{item.label}</span>
+        {item.badge === 'inbox' && inboxCount > 0 && (
+          <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+            {inboxCount > 99 ? '99+' : inboxCount}
+          </span>
         )}
-        <div className="space-y-1">
-          {group.items.map((item) => (
-            <Link key={item.href} href={item.href} className={linkClass}>
-              <span className="w-4 text-center text-slate-400">
-                {item.icon}
-              </span>
-              <span className="flex-1">{item.label}</span>
-              {item.badge === 'inbox' && inboxCount > 0 && (
-                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">
-                  {inboxCount > 99 ? '99+' : inboxCount}
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-    ))
+      </Link>
+    )
+  }
+
+  function renderNavGroups(linkClass: string) {
+    return (
+      <>
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={gi} className={gi === 0 ? '' : 'pt-4'}>
+            {group.heading && (
+              <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                {group.heading}
+              </div>
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => renderItem(item, linkClass))}
+            </div>
+          </div>
+        ))}
+        {/* "More" disclosure — collapsed by default. Pure HTML, no
+            JS. The chevron rotates via the group-open Tailwind
+            modifier when expanded. */}
+        <details className="group/more pt-4">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-600 [&::-webkit-details-marker]:hidden">
+            <span className="transition-transform group-open/more:rotate-90">
+              ▸
+            </span>
+            More
+          </summary>
+          <div className="mt-1">
+            {MORE_GROUPS.map((group, gi) => (
+              <div key={gi} className={gi === 0 ? '' : 'pt-3'}>
+                {group.heading && (
+                  <div className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+                    {group.heading}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  {group.items.map((item) => renderItem(item, linkClass))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+        <div className="pt-4">{renderItem(SETTINGS_ITEM, linkClass)}</div>
+      </>
+    )
   }
 
   const navLinkClass =
