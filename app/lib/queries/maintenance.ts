@@ -8,7 +8,7 @@ import type { Unit } from '@/app/lib/schemas/unit'
 import type { Property } from '@/app/lib/schemas/property'
 import type { Tenant } from '@/app/lib/schemas/tenant'
 
-// The global rent-roll-style query for /dashboard/maintenance.
+// The global rent-roll-style query for /dashboard/properties/maintenance.
 // Joins unit → property so the landlord sees where the issue is
 // without jumping pages. Tenant is optional.
 export type MaintenanceWithContext = MaintenanceRequest & {

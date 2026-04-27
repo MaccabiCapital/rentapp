@@ -127,7 +127,7 @@ export default async function LateRentWorkflow({
           }
           actionHref={
             hasLateFeeConfig
-              ? '/dashboard/late-fees'
+              ? '/dashboard/rent/late-fees'
               : `/dashboard/tenants/${lease.tenant?.id ?? ''}/leases/${lease.id}`
           }
           actionLabel={hasLateFeeConfig ? 'Open late fees' : 'Configure on lease'}
@@ -145,8 +145,8 @@ export default async function LateRentWorkflow({
           }
           actionHref={
             lateNotice
-              ? `/dashboard/notices/${lateNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=late_rent`
+              ? `/dashboard/tenants/notices/${lateNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=late_rent`
           }
           actionLabel={
             lateNotice ? 'View late-rent notice' : 'Generate late-rent notice'
@@ -184,8 +184,8 @@ export default async function LateRentWorkflow({
           }
           actionHref={
             cureNotice
-              ? `/dashboard/notices/${cureNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=cure_or_quit`
+              ? `/dashboard/tenants/notices/${cureNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=cure_or_quit`
           }
           actionLabel={
             cureNotice

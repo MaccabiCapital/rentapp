@@ -145,8 +145,8 @@ export async function createSettlement(
     await supabase.from('security_deposit_deduction_items').insert(items)
   }
 
-  revalidatePath('/dashboard/security-deposits')
-  redirect(`/dashboard/security-deposits/${settlement.id}`)
+  revalidatePath('/dashboard/tenants/security-deposits')
+  redirect(`/dashboard/tenants/security-deposits/${settlement.id}`)
 }
 
 // ------------------------------------------------------------
@@ -186,7 +186,7 @@ export async function updateSettlement(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
   return { success: true }
 }
 
@@ -254,7 +254,7 @@ export async function addDeductionItem(
   if (error) return { success: false, message: error.message }
 
   revalidatePath(
-    `/dashboard/security-deposits/${parsed.data.settlement_id}`,
+    `/dashboard/tenants/security-deposits/${parsed.data.settlement_id}`,
   )
   return { success: true }
 }
@@ -290,7 +290,7 @@ export async function updateDeductionItem(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
   return { success: true }
 }
 
@@ -324,7 +324,7 @@ export async function deleteDeductionItem(
     .eq('id', itemId)
 
   if (error) return { success: false, message: error.message }
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
   return { success: true }
 }
 
@@ -378,8 +378,8 @@ export async function finalizeSettlement(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
-  revalidatePath('/dashboard/security-deposits')
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
+  revalidatePath('/dashboard/tenants/security-deposits')
   return { success: true }
 }
 
@@ -398,7 +398,7 @@ export async function unfinalizeSettlement(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
   return { success: true }
 }
 
@@ -434,8 +434,8 @@ export async function markSettlementMailed(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/security-deposits/${settlementId}`)
-  revalidatePath('/dashboard/security-deposits')
+  revalidatePath(`/dashboard/tenants/security-deposits/${settlementId}`)
+  revalidatePath('/dashboard/tenants/security-deposits')
   return { success: true }
 }
 
@@ -454,8 +454,8 @@ export async function deleteSettlement(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath('/dashboard/security-deposits')
-  redirect('/dashboard/security-deposits')
+  revalidatePath('/dashboard/tenants/security-deposits')
+  redirect('/dashboard/tenants/security-deposits')
 }
 
 // ------------------------------------------------------------

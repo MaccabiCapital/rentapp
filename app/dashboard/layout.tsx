@@ -54,37 +54,12 @@ const SETTINGS_ITEM: NavItem = {
   icon: '⚐',
 }
 
-// Collapsed by default. Grouped inside the "More" disclosure so
-// the layout doesn't dump 13 links at once when expanded.
+// Items folded into entity parent pages (Rent / Tenants /
+// Properties / Settings) live there as tabs/sub-views — no
+// sidebar entry. What remains in "More" is cross-entity tooling
+// only.
 const MORE_GROUPS: NavGroup[] = [
   {
-    heading: 'Property care',
-    items: [
-      { href: '/dashboard/inspections', label: 'Inspections', icon: '☐' },
-      { href: '/dashboard/maintenance', label: 'Maintenance', icon: '⚙' },
-      { href: '/dashboard/insurance', label: 'Insurance', icon: '✚' },
-    ],
-  },
-  {
-    heading: 'Tenant lifecycle',
-    items: [
-      { href: '/dashboard/late-fees', label: 'Late fees', icon: '⏱' },
-      { href: '/dashboard/renewals', label: 'Renewals', icon: '↻' },
-      {
-        href: '/dashboard/renters-insurance',
-        label: 'Renters insurance',
-        icon: '◐',
-      },
-      { href: '/dashboard/notices', label: 'Notices', icon: '⚖' },
-      {
-        href: '/dashboard/security-deposits',
-        label: 'Security deposits',
-        icon: '◈',
-      },
-    ],
-  },
-  {
-    heading: 'Assistants & ops',
     items: [
       {
         href: '/dashboard/leasing-assistant',
@@ -93,7 +68,6 @@ const MORE_GROUPS: NavGroup[] = [
       },
       { href: '/dashboard/reports', label: 'Reports', icon: '📊' },
       { href: '/dashboard/financials', label: 'Financials', icon: '∑' },
-      { href: '/dashboard/team', label: 'My Team', icon: '◈' },
       { href: '/dashboard/compliance', label: 'Compliance', icon: '§' },
     ],
   },

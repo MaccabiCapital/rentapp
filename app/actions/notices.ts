@@ -139,9 +139,9 @@ export async function createNotice(
     }
   }
 
-  revalidatePath('/dashboard/notices')
+  revalidatePath('/dashboard/tenants/notices')
   revalidatePath('/dashboard')
-  redirect(`/dashboard/notices/${created.id}`)
+  redirect(`/dashboard/tenants/notices/${created.id}`)
 }
 
 export async function markNoticeServed(
@@ -187,8 +187,8 @@ export async function markNoticeServed(
     }
   }
 
-  revalidatePath('/dashboard/notices')
-  revalidatePath(`/dashboard/notices/${id}`)
+  revalidatePath('/dashboard/tenants/notices')
+  revalidatePath(`/dashboard/tenants/notices/${id}`)
   return { success: true }
 }
 
@@ -214,7 +214,7 @@ export async function deleteNotice(id: string): Promise<ActionState> {
     }
   }
 
-  revalidatePath('/dashboard/notices')
+  revalidatePath('/dashboard/tenants/notices')
   revalidatePath('/dashboard')
-  redirect('/dashboard/notices')
+  redirect('/dashboard/tenants/notices')
 }

@@ -127,9 +127,9 @@ export async function createInsurancePolicy(
     }
   }
 
-  revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/properties/insurance')
   revalidatePath('/dashboard')
-  redirect(`/dashboard/insurance/${created.id}`)
+  redirect(`/dashboard/properties/insurance/${created.id}`)
 }
 
 export async function updateInsurancePolicy(
@@ -193,10 +193,10 @@ export async function updateInsurancePolicy(
     }
   }
 
-  revalidatePath('/dashboard/insurance')
-  revalidatePath(`/dashboard/insurance/${id}`)
+  revalidatePath('/dashboard/properties/insurance')
+  revalidatePath(`/dashboard/properties/insurance/${id}`)
   revalidatePath('/dashboard')
-  redirect(`/dashboard/insurance/${id}`)
+  redirect(`/dashboard/properties/insurance/${id}`)
 }
 
 export async function deleteInsurancePolicy(id: string): Promise<ActionState> {
@@ -217,7 +217,7 @@ export async function deleteInsurancePolicy(id: string): Promise<ActionState> {
     return { success: false, message: 'Failed to delete insurance policy.' }
   }
 
-  revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/properties/insurance')
   revalidatePath('/dashboard')
-  redirect('/dashboard/insurance')
+  redirect('/dashboard/properties/insurance')
 }

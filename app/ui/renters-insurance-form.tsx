@@ -195,7 +195,7 @@ export function RentersInsuranceForm({
           <span className="text-sm text-emerald-600">Saved</span>
         )}
         <Link
-          href="/dashboard/renters-insurance"
+          href="/dashboard/tenants/renters-insurance"
           className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
         >
           Cancel

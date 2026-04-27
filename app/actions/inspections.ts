@@ -159,9 +159,9 @@ export async function createInspection(
     console.error('Starter checklist seed failed:', seedErr.message)
   }
 
-  revalidatePath('/dashboard/inspections')
+  revalidatePath('/dashboard/properties/inspections')
   revalidatePath('/dashboard')
-  redirect(`/dashboard/inspections/${created.id}`)
+  redirect(`/dashboard/properties/inspections/${created.id}`)
 }
 
 // ------------------------------------------------------------
@@ -203,8 +203,8 @@ export async function updateInspection(
     }
   }
 
-  revalidatePath('/dashboard/inspections')
-  revalidatePath(`/dashboard/inspections/${id}`)
+  revalidatePath('/dashboard/properties/inspections')
+  revalidatePath(`/dashboard/properties/inspections/${id}`)
   return { success: true }
 }
 
@@ -234,9 +234,9 @@ export async function deleteInspection(id: string): Promise<ActionState> {
     }
   }
 
-  revalidatePath('/dashboard/inspections')
+  revalidatePath('/dashboard/properties/inspections')
   revalidatePath('/dashboard')
-  redirect('/dashboard/inspections')
+  redirect('/dashboard/properties/inspections')
 }
 
 // ------------------------------------------------------------
@@ -292,7 +292,7 @@ export async function addInspectionItem(
     }
   }
 
-  revalidatePath(`/dashboard/inspections/${parsed.data.inspection_id}`)
+  revalidatePath(`/dashboard/properties/inspections/${parsed.data.inspection_id}`)
   return { success: true }
 }
 
@@ -351,7 +351,7 @@ export async function updateInspectionItem(
 
   await recomputeStatus(supabase, inspectionId)
 
-  revalidatePath(`/dashboard/inspections/${inspectionId}`)
+  revalidatePath(`/dashboard/properties/inspections/${inspectionId}`)
   return { success: true }
 }
 
@@ -395,7 +395,7 @@ export async function deleteInspectionItem(
     }
   }
 
-  revalidatePath(`/dashboard/inspections/${inspectionId}`)
+  revalidatePath(`/dashboard/properties/inspections/${inspectionId}`)
   return { success: true }
 }
 
@@ -430,8 +430,8 @@ export async function markInspectionComplete(
     }
   }
 
-  revalidatePath(`/dashboard/inspections/${id}`)
-  revalidatePath('/dashboard/inspections')
+  revalidatePath(`/dashboard/properties/inspections/${id}`)
+  revalidatePath('/dashboard/properties/inspections')
   return { success: true }
 }
 
@@ -462,8 +462,8 @@ export async function reopenInspection(id: string): Promise<ActionState> {
     }
   }
 
-  revalidatePath(`/dashboard/inspections/${id}`)
-  revalidatePath('/dashboard/inspections')
+  revalidatePath(`/dashboard/properties/inspections/${id}`)
+  revalidatePath('/dashboard/properties/inspections')
   return { success: true }
 }
 
@@ -536,7 +536,7 @@ export async function signInspection(
     }
   }
 
-  revalidatePath(`/dashboard/inspections/${id}`)
-  revalidatePath('/dashboard/inspections')
+  revalidatePath(`/dashboard/properties/inspections/${id}`)
+  revalidatePath('/dashboard/properties/inspections')
   return { success: true }
 }

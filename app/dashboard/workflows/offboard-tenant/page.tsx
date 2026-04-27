@@ -146,8 +146,8 @@ export default async function OffboardTenantWorkflow({
           actionLabel="Update lease"
           secondaryHref={
             terminateNotice
-              ? `/dashboard/notices/${terminateNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=terminate_tenancy`
+              ? `/dashboard/tenants/notices/${terminateNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=terminate_tenancy`
           }
           secondaryLabel={
             terminateNotice
@@ -174,8 +174,8 @@ export default async function OffboardTenantWorkflow({
           }
           actionHref={
             visualInspection
-              ? `/dashboard/inspections/${visualInspection.id}`
-              : `/dashboard/inspections/new?leaseId=${leaseId}&type=periodic`
+              ? `/dashboard/properties/inspections/${visualInspection.id}`
+              : `/dashboard/properties/inspections/new?leaseId=${leaseId}&type=periodic`
           }
           actionLabel={
             visualInspection
@@ -202,8 +202,8 @@ export default async function OffboardTenantWorkflow({
           }
           actionHref={
             moveOutInfoNotice
-              ? `/dashboard/notices/${moveOutInfoNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=move_out_info`
+              ? `/dashboard/tenants/notices/${moveOutInfoNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=move_out_info`
           }
           actionLabel={
             moveOutInfoNotice ? 'View info packet' : 'Generate info packet'
@@ -239,8 +239,8 @@ export default async function OffboardTenantWorkflow({
           }
           actionHref={
             moveOut
-              ? `/dashboard/inspections/${moveOut.id}`
-              : `/dashboard/inspections/new?leaseId=${leaseId}&type=move_out`
+              ? `/dashboard/properties/inspections/${moveOut.id}`
+              : `/dashboard/properties/inspections/new?leaseId=${leaseId}&type=move_out`
           }
           actionLabel={moveOut ? 'Open inspection' : 'Start move-out inspection'}
         />
@@ -262,7 +262,7 @@ export default async function OffboardTenantWorkflow({
           }
           actionHref={
             moveOut
-              ? `/dashboard/inspections/${moveOut.id}/compare`
+              ? `/dashboard/properties/inspections/${moveOut.id}/compare`
               : undefined
           }
           actionLabel={moveOut ? 'Open comparison' : undefined}
@@ -296,8 +296,8 @@ export default async function OffboardTenantWorkflow({
           }
           actionHref={
             depositSettlement
-              ? `/dashboard/security-deposits/${depositSettlement.id}`
-              : `/dashboard/security-deposits/new?leaseId=${leaseId}`
+              ? `/dashboard/tenants/security-deposits/${depositSettlement.id}`
+              : `/dashboard/tenants/security-deposits/new?leaseId=${leaseId}`
           }
           actionLabel={
             depositSettlement
@@ -372,7 +372,7 @@ export default async function OffboardTenantWorkflow({
               ? `/dashboard/listings/${activeListing.id}`
               : lease.turnover_strategy === 'list_during_notice' &&
                   (noticeLogged || !!terminateNotice)
-                ? `/dashboard/notices/new?leaseId=${leaseId}&type=entry`
+                ? `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=entry`
                 : undefined
           }
           secondaryLabel={

@@ -297,7 +297,7 @@ export async function recordTenantNotice(
   }
 
   revalidatePath('/dashboard/properties')
-  revalidatePath('/dashboard/renewals')
+  revalidatePath('/dashboard/tenants/renewals')
   revalidatePath(`/dashboard/tenants/${existing.tenant_id}`)
   revalidatePath(`/dashboard/tenants/${existing.tenant_id}/leases/${leaseId}`)
   return { success: true }
@@ -333,7 +333,7 @@ export async function clearTenantNotice(
   }
 
   revalidatePath('/dashboard/properties')
-  revalidatePath('/dashboard/renewals')
+  revalidatePath('/dashboard/tenants/renewals')
   revalidatePath(`/dashboard/tenants/${existing.tenant_id}/leases/${leaseId}`)
   return { success: true }
 }
@@ -414,7 +414,7 @@ export async function startRenewal(
     }
   }
 
-  revalidatePath('/dashboard/renewals')
+  revalidatePath('/dashboard/tenants/renewals')
   revalidatePath(`/dashboard/tenants/${current.tenant_id}`)
   redirect(`/dashboard/tenants/${current.tenant_id}/leases/${draft.id}/edit`)
 }

@@ -400,7 +400,7 @@ async function handleChatAnalyzed(supabase: any, ownerId: string, event: RetellC
       unitLabel,
       severity,
       description: analysis.description ?? transcript,
-      maintenanceUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/dashboard/maintenance/${mr.id}`,
+      maintenanceUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/dashboard/properties/maintenance/${mr.id}`,
     })
   }
 }

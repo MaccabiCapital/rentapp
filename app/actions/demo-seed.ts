@@ -211,7 +211,7 @@ export async function seedDemoData(): Promise<ActionState> {
   // Leases
   // ------------------------------------------------------------
   // Maria's lease ends in 45 days — lands in the "Expiring 31-90 days"
-  // blue bucket on /dashboard/renewals so the landlord can start
+  // blue bucket on /dashboard/tenants/renewals so the landlord can start
   // a renewal offer.
   const mariaEndDate = daysAgo(-45) // 45 days from now
 
@@ -1026,12 +1026,12 @@ Photos available on request. Showings by appointment only — current tenant sti
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/properties')
   revalidatePath('/dashboard/tenants')
-  revalidatePath('/dashboard/maintenance')
+  revalidatePath('/dashboard/properties/maintenance')
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
-  revalidatePath('/dashboard/team')
+  revalidatePath('/dashboard/settings/team')
   revalidatePath('/dashboard/listings')
-  revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/properties/insurance')
   revalidatePath('/dashboard/inbox')
   redirect('/dashboard/properties')
 }
@@ -1160,11 +1160,11 @@ export async function unseedDemoData(): Promise<ActionState> {
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/properties')
   revalidatePath('/dashboard/tenants')
-  revalidatePath('/dashboard/maintenance')
+  revalidatePath('/dashboard/properties/maintenance')
   revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/financials')
-  revalidatePath('/dashboard/team')
-  revalidatePath('/dashboard/insurance')
+  revalidatePath('/dashboard/settings/team')
+  revalidatePath('/dashboard/properties/insurance')
   revalidatePath('/dashboard/inbox')
   redirect('/dashboard')
 }

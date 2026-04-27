@@ -85,9 +85,9 @@ export async function createRentersInsurancePolicy(
     }
   }
 
-  revalidatePath('/dashboard/renters-insurance')
+  revalidatePath('/dashboard/tenants/renters-insurance')
   revalidatePath('/dashboard')
-  redirect(`/dashboard/renters-insurance/${created.id}`)
+  redirect(`/dashboard/tenants/renters-insurance/${created.id}`)
 }
 
 export async function updateRentersInsurancePolicy(
@@ -134,8 +134,8 @@ export async function updateRentersInsurancePolicy(
     }
   }
 
-  revalidatePath('/dashboard/renters-insurance')
-  revalidatePath(`/dashboard/renters-insurance/${id}`)
+  revalidatePath('/dashboard/tenants/renters-insurance')
+  revalidatePath(`/dashboard/tenants/renters-insurance/${id}`)
   return { success: true }
 }
 
@@ -163,7 +163,7 @@ export async function deleteRentersInsurancePolicy(
     }
   }
 
-  revalidatePath('/dashboard/renters-insurance')
+  revalidatePath('/dashboard/tenants/renters-insurance')
   revalidatePath('/dashboard')
-  redirect('/dashboard/renters-insurance')
+  redirect('/dashboard/tenants/renters-insurance')
 }

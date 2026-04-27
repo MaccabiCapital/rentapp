@@ -42,7 +42,7 @@ export function InspectionHeaderActions({
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
       <a
-        href={`/dashboard/inspections/${inspectionId}/pdf`}
+        href={`/dashboard/properties/inspections/${inspectionId}/pdf`}
         className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
       >
         Download PDF

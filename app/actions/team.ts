@@ -82,8 +82,8 @@ export async function createTeamMember(
     }
   }
 
-  revalidatePath('/dashboard/team')
-  redirect(`/dashboard/team/${created.id}`)
+  revalidatePath('/dashboard/settings/team')
+  redirect(`/dashboard/settings/team/${created.id}`)
 }
 
 export async function updateTeamMember(
@@ -126,9 +126,9 @@ export async function updateTeamMember(
     }
   }
 
-  revalidatePath('/dashboard/team')
-  revalidatePath(`/dashboard/team/${id}`)
-  redirect(`/dashboard/team/${id}`)
+  revalidatePath('/dashboard/settings/team')
+  revalidatePath(`/dashboard/settings/team/${id}`)
+  redirect(`/dashboard/settings/team/${id}`)
 }
 
 export async function deleteTeamMember(id: string): Promise<ActionState> {
@@ -142,8 +142,8 @@ export async function deleteTeamMember(id: string): Promise<ActionState> {
     return { success: false, message: 'Failed to delete team member.' }
   }
 
-  revalidatePath('/dashboard/team')
-  redirect('/dashboard/team')
+  revalidatePath('/dashboard/settings/team')
+  redirect('/dashboard/settings/team')
 }
 
 // Called from maintenance/expense actions after a job is

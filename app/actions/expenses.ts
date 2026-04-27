@@ -69,8 +69,8 @@ export async function createExpense(
   const teamMemberId = readTeamMemberId(formData)
   if (teamMemberId) {
     await touchTeamMemberUsage(teamMemberId, parsed.data.amount)
-    revalidatePath(`/dashboard/team/${teamMemberId}`)
-    revalidatePath('/dashboard/team')
+    revalidatePath(`/dashboard/settings/team/${teamMemberId}`)
+    revalidatePath('/dashboard/settings/team')
   }
 
   revalidatePath('/dashboard/financials')

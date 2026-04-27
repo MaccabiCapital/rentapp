@@ -76,8 +76,8 @@ export async function createRecurringTask(
     }
   }
 
-  revalidatePath('/dashboard/maintenance/recurring')
-  redirect('/dashboard/maintenance/recurring')
+  revalidatePath('/dashboard/properties/maintenance/recurring')
+  redirect('/dashboard/properties/maintenance/recurring')
 }
 
 export async function updateRecurringTask(
@@ -112,7 +112,7 @@ export async function updateRecurringTask(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath('/dashboard/maintenance/recurring')
+  revalidatePath('/dashboard/properties/maintenance/recurring')
   return { success: true }
 }
 
@@ -183,8 +183,8 @@ export async function completeRecurringTask(
     })
     .eq('id', taskId)
 
-  revalidatePath('/dashboard/maintenance/recurring')
-  revalidatePath(`/dashboard/maintenance/recurring/${taskId}`)
+  revalidatePath('/dashboard/properties/maintenance/recurring')
+  revalidatePath(`/dashboard/properties/maintenance/recurring/${taskId}`)
   revalidatePath('/dashboard')
   return { success: true }
 }
@@ -199,8 +199,8 @@ export async function setTaskStatus(
     .update({ status })
     .eq('id', taskId)
   if (error) return { success: false, message: error.message }
-  revalidatePath('/dashboard/maintenance/recurring')
-  revalidatePath(`/dashboard/maintenance/recurring/${taskId}`)
+  revalidatePath('/dashboard/properties/maintenance/recurring')
+  revalidatePath(`/dashboard/properties/maintenance/recurring/${taskId}`)
   return { success: true }
 }
 
@@ -213,6 +213,6 @@ export async function deleteRecurringTask(
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', taskId)
   if (error) return { success: false, message: error.message }
-  revalidatePath('/dashboard/maintenance/recurring')
-  redirect('/dashboard/maintenance/recurring')
+  revalidatePath('/dashboard/properties/maintenance/recurring')
+  redirect('/dashboard/properties/maintenance/recurring')
 }

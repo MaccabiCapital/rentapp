@@ -122,8 +122,8 @@ export default async function OnboardTenantWorkflow({
           }
           actionHref={
             moveIn
-              ? `/dashboard/inspections/${moveIn.id}`
-              : `/dashboard/inspections/new?leaseId=${leaseId}&type=move_in`
+              ? `/dashboard/properties/inspections/${moveIn.id}`
+              : `/dashboard/properties/inspections/new?leaseId=${leaseId}&type=move_in`
           }
           actionLabel={moveIn ? 'Open inspection' : 'Start move-in inspection'}
         />
@@ -140,8 +140,8 @@ export default async function OnboardTenantWorkflow({
           }
           actionHref={
             insurance
-              ? `/dashboard/renters-insurance/${insurance.id}`
-              : `/dashboard/renters-insurance/new?tenantId=${lease.tenant?.id ?? ''}&leaseId=${leaseId}`
+              ? `/dashboard/tenants/renters-insurance/${insurance.id}`
+              : `/dashboard/tenants/renters-insurance/new?tenantId=${lease.tenant?.id ?? ''}&leaseId=${leaseId}`
           }
           actionLabel={insurance ? 'View policy' : 'Log policy'}
         />
@@ -158,8 +158,8 @@ export default async function OnboardTenantWorkflow({
           }
           actionHref={
             welcomeNotice
-              ? `/dashboard/notices/${welcomeNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=entry`
+              ? `/dashboard/tenants/notices/${welcomeNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=entry`
           }
           actionLabel={welcomeNotice ? 'View notice' : 'Draft welcome notice'}
         />

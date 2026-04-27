@@ -163,7 +163,7 @@ export function InspectionNewForm({
 
       <div className="flex items-center justify-end gap-3">
         <Link
-          href="/dashboard/inspections"
+          href="/dashboard/properties/inspections"
           className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
         >
           Cancel

@@ -258,8 +258,8 @@ export function RecurringTaskForm({
           <Link
             href={
               existing
-                ? `/dashboard/maintenance/recurring/${existing.id}`
-                : '/dashboard/maintenance/recurring'
+                ? `/dashboard/properties/maintenance/recurring/${existing.id}`
+                : '/dashboard/properties/maintenance/recurring'
             }
             className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
           >

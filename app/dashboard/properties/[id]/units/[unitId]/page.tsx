@@ -251,7 +251,7 @@ export default async function UnitDetailPage({
                 <tr key={m.id} className="even:bg-zinc-50/40">
                   <td className="px-4 py-3 text-sm text-zinc-900">
                     <Link
-                      href={`/dashboard/maintenance/${m.id}`}
+                      href={`/dashboard/properties/maintenance/${m.id}`}
                       className="font-medium text-indigo-600 hover:text-indigo-700"
                     >
                       {m.title}

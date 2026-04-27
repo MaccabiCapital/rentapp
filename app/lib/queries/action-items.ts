@@ -88,7 +88,7 @@ async function leasesExpiringSoon(
         ? `${tenantName} is moving out in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`
         : `Lease with ${tenantName} expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
       body: `${propName} · ${unitLabel}. ${r.tenant_notice_given_on ? 'Prep move-out.' : 'Decide renewal / non-renewal and send the right notice.'}`,
-      href: `/dashboard/renewals`,
+      href: `/dashboard/tenants/renewals`,
       icon: '↻',
     })
   }
@@ -167,7 +167,7 @@ async function unfinishedInspections(
       category: 'Inspections',
       title: `${typeLabel} inspection in progress — ${tenantName}`,
       body: `${propName} · ${unitLabel}. Finish rating items, collect photos, capture signatures.`,
-      href: `/dashboard/inspections/${r.id}`,
+      href: `/dashboard/properties/inspections/${r.id}`,
       icon: '☐',
     }
   })
@@ -253,7 +253,7 @@ async function notUnservedNotices(
       category: 'Notices',
       title: `${typeLabel} notice for ${tenantName} not yet served (${ageDays}d old)`,
       body: `Deliver the notice (hand / mail / certified / email / posting) and record the date to keep your paper trail intact.`,
-      href: `/dashboard/notices/${r.id}`,
+      href: `/dashboard/tenants/notices/${r.id}`,
       icon: '⚖',
     }
   })
@@ -286,7 +286,7 @@ async function rentersInsuranceSignals(
       category: 'Renters insurance',
       title: `${tenantName}'s renters policy expired`,
       body: `Expired ${r.expiry_date}. Ask the tenant for updated proof of insurance and log it.`,
-      href: `/dashboard/renters-insurance/${r.id}`,
+      href: `/dashboard/tenants/renters-insurance/${r.id}`,
       icon: '◐',
     })
   }
@@ -314,7 +314,7 @@ async function rentersInsuranceSignals(
       category: 'Renters insurance',
       title: `${tenantName}'s renters policy expires soon`,
       body: `Expires ${r.expiry_date}. Give the tenant a heads-up to renew.`,
-      href: `/dashboard/renters-insurance/${r.id}`,
+      href: `/dashboard/tenants/renters-insurance/${r.id}`,
       icon: '◐',
     })
   }
@@ -353,7 +353,7 @@ async function rentersInsuranceSignals(
       category: 'Renters insurance',
       title: `${tenantName} is missing a required renters policy`,
       body: `Lease at ${propName} · ${unitLabel} requires renters insurance. Request proof and log it.`,
-      href: `/dashboard/renters-insurance/new`,
+      href: `/dashboard/tenants/renters-insurance/new`,
       icon: '◐',
     })
   }
@@ -434,7 +434,7 @@ async function pendingLateFees(
       category: 'Late fees',
       title: `${rows.length} late fee${rows.length === 1 ? '' : 's'} owed (${formatted})`,
       body: 'Auto-applied to overdue rent. Review, mark paid as collected, or waive.',
-      href: '/dashboard/late-fees',
+      href: '/dashboard/rent/late-fees',
       icon: '⏱',
       count: rows.length,
     },
@@ -512,7 +512,7 @@ async function urgentMaintenance(
       category: 'Maintenance',
       title: `${isEmergency ? 'Emergency' : 'High-priority'} maintenance — ${r.title}`,
       body: `${propName} · ${unitLabel}. Assign, status-update, or close.`,
-      href: `/dashboard/maintenance/${r.id}`,
+      href: `/dashboard/properties/maintenance/${r.id}`,
       icon: '⚙',
     }
   })
@@ -572,7 +572,7 @@ async function recurringMaintenanceDue(
       category: 'Recurring maintenance',
       title: `Overdue: ${r.title}`,
       body: `${where} — was due ${r.next_due_date}. Mark complete or reschedule.`,
-      href: `/dashboard/maintenance/recurring/${r.id}`,
+      href: `/dashboard/properties/maintenance/recurring/${r.id}`,
       icon: '⏱',
     })
   }
@@ -584,7 +584,7 @@ async function recurringMaintenanceDue(
       category: 'Recurring maintenance',
       title: `${soonRows.length} recurring task${soonRows.length === 1 ? '' : 's'} due soon`,
       body: 'Within the lead-time window. Schedule the vendor before they go overdue.',
-      href: '/dashboard/maintenance/recurring',
+      href: '/dashboard/properties/maintenance/recurring',
       icon: '⏱',
       count: soonRows.length,
     })

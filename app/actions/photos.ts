@@ -51,12 +51,12 @@ function revalidateForEntity(
       revalidatePath(`/dashboard/properties/${propertyId}/units/${entityId}`)
     }
   } else if (entityType === 'maintenance') {
-    revalidatePath('/dashboard/maintenance')
-    revalidatePath(`/dashboard/maintenance/${entityId}`)
+    revalidatePath('/dashboard/properties/maintenance')
+    revalidatePath(`/dashboard/properties/maintenance/${entityId}`)
   } else if (entityType === 'inspection_items') {
-    revalidatePath('/dashboard/inspections')
+    revalidatePath('/dashboard/properties/inspections')
     if (parentId) {
-      revalidatePath(`/dashboard/inspections/${parentId}`)
+      revalidatePath(`/dashboard/properties/inspections/${parentId}`)
     }
   }
 }

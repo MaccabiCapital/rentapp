@@ -76,7 +76,7 @@ export async function applyLateFeeManually(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath('/dashboard/late-fees')
+  revalidatePath('/dashboard/rent/late-fees')
   revalidatePath('/dashboard/rent')
   return { success: true }
 }
@@ -110,7 +110,7 @@ export async function waiveLateFee(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath('/dashboard/late-fees')
+  revalidatePath('/dashboard/rent/late-fees')
   return { success: true }
 }
 
@@ -142,7 +142,7 @@ export async function markLateFeePaid(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath('/dashboard/late-fees')
+  revalidatePath('/dashboard/rent/late-fees')
   return { success: true }
 }
 
@@ -158,7 +158,7 @@ export async function deleteLateFee(chargeId: string): Promise<ActionState> {
     .eq('id', chargeId)
 
   if (error) return { success: false, message: error.message }
-  revalidatePath('/dashboard/late-fees')
+  revalidatePath('/dashboard/rent/late-fees')
   return { success: true }
 }
 
@@ -190,7 +190,7 @@ export async function updateLeaseLateFeeConfig(
 
   if (error) return { success: false, message: error.message }
 
-  revalidatePath(`/dashboard/late-fees`)
+  revalidatePath(`/dashboard/rent/late-fees`)
   revalidatePath(`/dashboard/rent`)
   return { success: true }
 }
@@ -217,7 +217,7 @@ export async function runLateFeeScanNow(): Promise<ActionState> {
     }
   }
 
-  revalidatePath('/dashboard/late-fees')
+  revalidatePath('/dashboard/rent/late-fees')
   revalidatePath('/dashboard/rent')
   revalidatePath('/dashboard')
   return { success: true }

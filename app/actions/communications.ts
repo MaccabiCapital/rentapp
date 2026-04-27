@@ -30,9 +30,9 @@ function pickRevalidatePath(entityType: string, entityId: string) {
     case 'prospect':
       return `/dashboard/prospects/${entityId}`
     case 'team_member':
-      return `/dashboard/team/${entityId}`
+      return `/dashboard/settings/team/${entityId}`
     case 'maintenance_request':
-      return `/dashboard/maintenance/${entityId}`
+      return `/dashboard/properties/maintenance/${entityId}`
     case 'lease':
       return null
     case 'triage':

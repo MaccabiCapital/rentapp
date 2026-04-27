@@ -82,7 +82,7 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
           ? `Lease with ${tenantName} expired ${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? '' : 's'} ago`
           : `${tenantName}'s lease expires in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`,
       subtitle: unitLabel,
-      href: '/dashboard/renewals',
+      href: '/dashboard/tenants/renewals',
       sort_rank: daysUntil, // negative = overdue, sorts first
     })
   }
@@ -119,7 +119,7 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
       icon: '⚠',
       title: `${tenantName} gave notice`,
       subtitle: `${unitLabel} · vacating in ${daysToMoveOut} day${daysToMoveOut === 1 ? '' : 's'} — prep for turnover`,
-      href: '/dashboard/renewals',
+      href: '/dashboard/tenants/renewals',
       sort_rank: -1000, // always top
     })
   }
@@ -197,7 +197,7 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
         age === 0
           ? `${unitLabel} · reported today`
           : `${unitLabel} · reported ${age} day${age === 1 ? '' : 's'} ago`,
-      href: `/dashboard/maintenance/${r.id}`,
+      href: `/dashboard/properties/maintenance/${r.id}`,
       sort_rank: r.urgency === 'emergency' ? -500 - age : -100 - age,
     })
   }
@@ -323,7 +323,7 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
       icon: '✚',
       title,
       subtitle,
-      href: `/dashboard/insurance/${r.id}`,
+      href: `/dashboard/properties/insurance/${r.id}`,
       // Expired policies get top priority within the red tier.
       sort_rank: daysUntil < 0 ? -800 + daysUntil : daysUntil,
     })

@@ -109,9 +109,9 @@ export async function createMaintenanceRequest(
     }
   }
 
-  revalidatePath('/dashboard/maintenance')
+  revalidatePath('/dashboard/properties/maintenance')
   revalidatePath(`/dashboard/properties/${unitRow.property_id}/units/${unitId}`)
-  redirect(`/dashboard/maintenance/${created.id}`)
+  redirect(`/dashboard/properties/maintenance/${created.id}`)
 }
 
 export async function updateMaintenanceRequest(
@@ -179,13 +179,13 @@ export async function updateMaintenanceRequest(
     }
   }
 
-  revalidatePath('/dashboard/maintenance')
-  revalidatePath(`/dashboard/maintenance/${id}`)
-  revalidatePath(`/dashboard/team`)
+  revalidatePath('/dashboard/properties/maintenance')
+  revalidatePath(`/dashboard/properties/maintenance/${id}`)
+  revalidatePath(`/dashboard/settings/team`)
   revalidatePath(
     `/dashboard/properties/${existing.unit_id}`,
   )
-  redirect(`/dashboard/maintenance/${id}`)
+  redirect(`/dashboard/properties/maintenance/${id}`)
 }
 
 // One-click status transition. Called from the detail page
@@ -225,8 +225,8 @@ export async function setMaintenanceStatus(
     return { success: false, message: 'Failed to update status.' }
   }
 
-  revalidatePath('/dashboard/maintenance')
-  revalidatePath(`/dashboard/maintenance/${id}`)
+  revalidatePath('/dashboard/properties/maintenance')
+  revalidatePath(`/dashboard/properties/maintenance/${id}`)
   return { success: true }
 }
 
@@ -251,9 +251,9 @@ export async function deleteMaintenanceRequest(
     return { success: false, message: 'Failed to delete maintenance request.' }
   }
 
-  revalidatePath('/dashboard/maintenance')
+  revalidatePath('/dashboard/properties/maintenance')
   if (existing?.unit_id) {
     revalidatePath(`/dashboard/properties/${existing.unit_id}`)
   }
-  redirect('/dashboard/maintenance')
+  redirect('/dashboard/properties/maintenance')
 }

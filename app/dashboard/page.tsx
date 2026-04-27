@@ -138,7 +138,7 @@ export default async function DashboardHome() {
             label="Open maintenance"
             value={summary.open_maintenance_count}
             tone={summary.open_maintenance_count > 0 ? 'warning' : 'default'}
-            href="/dashboard/maintenance"
+            href="/dashboard/properties/maintenance"
           />
           <StatCard
             label="Active prospects"
@@ -175,7 +175,7 @@ export default async function DashboardHome() {
                     ? 'warning'
                     : 'default'
               }
-              href="/dashboard/insurance"
+              href="/dashboard/properties/insurance"
             />
           )}
           {inspections && inspections.total > 0 && (
@@ -190,7 +190,7 @@ export default async function DashboardHome() {
                     : 'All complete'
               }
               tone={inspections.drafts > 0 ? 'warning' : 'default'}
-              href="/dashboard/inspections"
+              href="/dashboard/properties/inspections"
             />
           )}
           {notices && notices.unserved > 0 && (
@@ -199,7 +199,7 @@ export default async function DashboardHome() {
               value={notices.unserved}
               subLabel={`${notices.total} total · ${notices.unserved} not yet served`}
               tone="warning"
-              href="/dashboard/notices"
+              href="/dashboard/tenants/notices"
             />
           )}
           {rentersInsurance &&
@@ -229,7 +229,7 @@ export default async function DashboardHome() {
                       ? 'warning'
                       : 'default'
                 }
-                href="/dashboard/renters-insurance"
+                href="/dashboard/tenants/renters-insurance"
               />
             )}
           {leasing && leasing.total > 0 && (

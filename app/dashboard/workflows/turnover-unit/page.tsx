@@ -135,8 +135,8 @@ export default async function TurnoverUnitWorkflow({
           }
           actionHref={
             maintenance.firstId
-              ? `/dashboard/maintenance/${maintenance.firstId}`
-              : '/dashboard/maintenance'
+              ? `/dashboard/properties/maintenance/${maintenance.firstId}`
+              : '/dashboard/properties/maintenance'
           }
           actionLabel={
             maintenance.firstId ? 'View open items' : 'Open Maintenance'

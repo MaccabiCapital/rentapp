@@ -138,8 +138,8 @@ export default async function AnnualRenewalWorkflow({
           }
           actionHref={
             rentIncreaseNotice
-              ? `/dashboard/notices/${rentIncreaseNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=rent_increase`
+              ? `/dashboard/tenants/notices/${rentIncreaseNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=rent_increase`
           }
           actionLabel={
             rentIncreaseNotice
@@ -160,8 +160,8 @@ export default async function AnnualRenewalWorkflow({
           }
           actionHref={
             terminateNotice
-              ? `/dashboard/notices/${terminateNotice.id}`
-              : `/dashboard/notices/new?leaseId=${leaseId}&type=terminate_tenancy`
+              ? `/dashboard/tenants/notices/${terminateNotice.id}`
+              : `/dashboard/tenants/notices/new?leaseId=${leaseId}&type=terminate_tenancy`
           }
           actionLabel={
             terminateNotice
