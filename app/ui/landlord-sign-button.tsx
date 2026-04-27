@@ -4,7 +4,7 @@
 // Landlord-sign modal — typed name + signature pad
 // ============================================================
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { signLeaseAsLandlord } from '@/app/actions/lease-signatures'
 import { emptyActionState } from '@/app/lib/types'
 import { SignaturePad } from './signature-pad'
@@ -20,11 +20,24 @@ export function LandlordSignButton({ leaseId }: { leaseId: string }) {
   const message =
     state.success === false && 'message' in state ? state.message : null
 
-  // Close modal on success
-  if (state.success && open) {
-    // The action revalidated the path; close the modal asynchronously.
-    setTimeout(() => setOpen(false), 0)
-  }
+  // Close modal on success — but ONLY after a real submission.
+  // emptyActionState is itself { success: true }, so a naive
+  // `state.success && open` check would close the modal the
+  // instant it opens. Track whether we've seen a pending state
+  // (i.e. an actual submission cycle) before allowing the close.
+  const hasSubmittedRef = useRef(false)
+  useEffect(() => {
+    if (isPending) {
+      hasSubmittedRef.current = true
+    }
+  }, [isPending])
+  useEffect(() => {
+    if (state.success && open && hasSubmittedRef.current && !isPending) {
+      hasSubmittedRef.current = false
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: close modal in response to action result
+      setOpen(false)
+    }
+  }, [state, open, isPending])
 
   if (!open) {
     return (

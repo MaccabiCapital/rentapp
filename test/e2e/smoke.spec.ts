@@ -11,7 +11,7 @@
 // Run: SMOKE_EMAIL=... SMOKE_PASSWORD=... npx playwright test \
 //        --config test/e2e/playwright.config.ts
 
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 const EMAIL = process.env.SMOKE_EMAIL ?? 'arthur.smelyansky@gmail.com'
 const PASSWORD = process.env.SMOKE_PASSWORD ?? 'Rentbase2026!'
@@ -63,7 +63,7 @@ test.describe.configure({ mode: 'serial' })
 test.setTimeout(120_000)
 
 test.describe('rentapp smoke', () => {
-  let consoleErrors: Array<{ url: string; message: string }> = []
+  const consoleErrors: Array<{ url: string; message: string }> = []
 
   test.beforeAll(async ({ browser }) => {
     // No-op; collected per-test below.

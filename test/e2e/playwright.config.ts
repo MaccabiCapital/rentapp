@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config as loadEnv } from 'dotenv'
+import path from 'node:path'
+
+// Load .env.local so tests can use SUPABASE_SERVICE_ROLE_KEY etc
+// for setup queries.
+loadEnv({ path: path.resolve(__dirname, '../../.env.local') })
 
 export default defineConfig({
   testDir: '.',
