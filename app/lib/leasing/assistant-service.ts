@@ -14,11 +14,15 @@
 // returns the canned response. Every response goes through the
 // fair-housing outbound scanner before it's returned.
 
+import Anthropic from '@anthropic-ai/sdk'
 import {
   LEASING_ASSISTANT_SYSTEM_PROMPT,
   outboundFlagsFor,
   type GuardrailFlags,
 } from './fair-housing-guardrails'
+
+const LEASING_ASSISTANT_MODEL =
+  process.env.LEASING_ASSISTANT_MODEL ?? 'claude-sonnet-4-6'
 
 export type DraftRequest = {
   conversationHistory: Array<{
@@ -46,9 +50,13 @@ export type DraftResult = {
 }
 
 function isEnabled(): boolean {
-  // Never enable in stub mode — flip to true when the real
-  // provider is wired up.
-  return process.env.LEASING_ASSISTANT_ENABLED === 'true'
+  // Live mode requires both the feature flag AND an API key.
+  // If either is missing, the page banner stays in stub mode so
+  // the landlord knows the AI isn't actually drafting yet.
+  return (
+    process.env.LEASING_ASSISTANT_ENABLED === 'true' &&
+    !!process.env.ANTHROPIC_API_KEY
+  )
 }
 
 function buildSystemPrompt(custom: string | null): string {
@@ -91,28 +99,66 @@ function stubResponse(req: DraftRequest): DraftResult {
 // The shape of the return value is unchanged whether stub or
 // live, so callers don't need to know.
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function liveLlmDraft(_req: DraftRequest): Promise<DraftResult> {
-  // TODO: implement against Anthropic SDK or chosen provider.
-  // const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  // const systemPrompt = buildSystemPrompt(_req.customSystemPrompt)
-  // const messages = _req.conversationHistory.map(m => ({
-  //   role: m.direction === 'inbound' ? 'user' : 'assistant',
-  //   content: m.content,
-  // }))
-  // const result = await client.messages.create({
-  //   model: 'claude-sonnet-4-6',
-  //   system: systemPrompt,
-  //   messages,
-  //   max_tokens: 400,
-  // })
-  // const content = extractText(result)
-  // const flags = outboundFlagsFor(content)
-  // return { content, guardrailFlags: flags, isLive: true }
+async function liveLlmDraft(req: DraftRequest): Promise<DraftResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY missing')
+  }
 
-  throw new Error(
-    'Live LLM integration not implemented yet. Set LEASING_ASSISTANT_ENABLED=false or implement liveLlmDraft().',
-  )
+  const client = new Anthropic({ apiKey })
+  const systemPrompt = buildSystemPrompt(req.customSystemPrompt)
+
+  // Map conversation history into Anthropic's user/assistant
+  // turn structure. Inbound = the prospect (user role); outbound
+  // (drafted or sent) = the AI/landlord side (assistant role).
+  // Anthropic requires alternating roles, so collapse adjacent
+  // same-role turns by joining their content with a blank line.
+  const turns = req.conversationHistory.map((m) => ({
+    role: m.direction === 'inbound' ? ('user' as const) : ('assistant' as const),
+    content: m.content,
+  }))
+
+  const collapsed: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  for (const t of turns) {
+    const last = collapsed[collapsed.length - 1]
+    if (last && last.role === t.role) {
+      last.content = `${last.content}\n\n${t.content}`
+    } else {
+      collapsed.push({ ...t })
+    }
+  }
+
+  // Anthropic requires the conversation to start with a user
+  // message. If the first turn is from the assistant (e.g. an
+  // outbound nudge), prepend a synthetic prospect-context line.
+  if (collapsed.length === 0 || collapsed[0].role !== 'user') {
+    const prospectName = req.prospectName ?? 'a prospect'
+    const ctx = req.listingContext
+    const ctxBits: string[] = []
+    if (ctx?.propertyName) ctxBits.push(ctx.propertyName)
+    if (ctx?.unitLabel) ctxBits.push(ctx.unitLabel)
+    const ctxStr = ctxBits.length > 0 ? ` about ${ctxBits.join(' · ')}` : ''
+    collapsed.unshift({
+      role: 'user',
+      content: `[New inquiry from ${prospectName}${ctxStr}. Draft an opening reply.]`,
+    })
+  }
+
+  const result = await client.messages.create({
+    model: LEASING_ASSISTANT_MODEL,
+    system: systemPrompt,
+    messages: collapsed,
+    max_tokens: 500,
+  })
+
+  const textBlock = result.content.find((b) => b.type === 'text')
+  const content = textBlock && 'text' in textBlock ? textBlock.text : ''
+  if (!content) {
+    throw new Error('Empty response from LLM')
+  }
+
+  const flags = outboundFlagsFor(content)
+  return { content, guardrailFlags: flags, isLive: true }
 }
 
 // ------------------------------------------------------------
