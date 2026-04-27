@@ -3,6 +3,7 @@
 import { useActionState, useState, useMemo } from 'react'
 import type { ActionState } from '@/app/lib/types'
 import type { Listing } from '@/app/lib/schemas/listing'
+import { ListingCopyGenerator } from './listing-copy-generator'
 
 type PropertyOption = {
   id: string
@@ -127,6 +128,8 @@ export function ListingForm({
         defaultValue={defaultValues?.title}
         errors={errors.title}
       />
+
+      <ListingCopyGenerator />
 
       <div>
         <label

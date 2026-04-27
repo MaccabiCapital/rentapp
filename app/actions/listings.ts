@@ -32,6 +32,10 @@ import {
 } from '@/app/lib/schemas/listing'
 import { verifyTurnstile } from '@/app/lib/turnstile'
 import type { ActionState } from '@/app/lib/types'
+import {
+  generateListingCopy,
+  type ListingCopyResult,
+} from '@/app/lib/listings/copy-generator'
 
 function parseListingForm(formData: FormData) {
   return {
@@ -329,6 +333,114 @@ export async function submitInquiry(
 // path that doesn't require auth. We do it through the service
 // role so RLS doesn't block it.
 // ============================================================
+
+// ============================================================
+// Listing copy AI generator (landlord-side, authenticated)
+// ============================================================
+//
+// Generates a fair-housing-safe description from the property/
+// unit facts. Returns the proposed copy + any scan findings; the
+// landlord pastes it into the form themselves. We do NOT auto-
+// save — the human stays in the loop.
+
+export type GenerateListingCopyResult =
+  | { success: true; result: ListingCopyResult }
+  | { success: false; message: string }
+
+export async function generateListingCopyAction(
+  formData: FormData,
+): Promise<GenerateListingCopyResult> {
+  const propertyId = String(formData.get('property_id') ?? '').trim()
+  const unitId = (() => {
+    const v = String(formData.get('unit_id') ?? '').trim()
+    return v.length > 0 ? v : null
+  })()
+  const headlineRent = (() => {
+    const v = String(formData.get('headline_rent') ?? '').trim()
+    if (!v) return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  })()
+  const availableOn = (() => {
+    const v = String(formData.get('available_on') ?? '').trim()
+    return v.length > 0 ? v : null
+  })()
+  const highlights = (() => {
+    const v = String(formData.get('highlights') ?? '').trim()
+    return v.length > 0 ? v : null
+  })()
+
+  if (!propertyId) {
+    return { success: false, message: 'Pick a property first.' }
+  }
+
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, message: 'You must be signed in.' }
+  }
+
+  // RLS-gated: only the owner sees their own property/unit.
+  const { data: property, error: propertyErr } = await supabase
+    .from('properties')
+    .select('id, name, city, state')
+    .eq('id', propertyId)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (propertyErr || !property) {
+    return { success: false, message: 'Property not found.' }
+  }
+
+  let unitNumber: string | null = null
+  let bedrooms: number | null = null
+  let bathrooms: number | null = null
+  let squareFeet: number | null = null
+
+  if (unitId) {
+    const { data: unit } = await supabase
+      .from('units')
+      .select('unit_number, bedrooms, bathrooms, square_feet')
+      .eq('id', unitId)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (unit) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const u = unit as any
+      unitNumber = u.unit_number ?? null
+      bedrooms = u.bedrooms ?? null
+      bathrooms = u.bathrooms ?? null
+      squareFeet = u.square_feet ?? null
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = property as any
+  const jurisdiction =
+    p.state && typeof p.state === 'string' && p.state.length === 2
+      ? p.state.toUpperCase()
+      : 'US'
+
+  const result = await generateListingCopy({
+    context: {
+      propertyName: p.name,
+      city: p.city ?? null,
+      state: p.state ?? null,
+      unitNumber,
+      bedrooms,
+      bathrooms,
+      squareFeet,
+      monthlyRent: headlineRent,
+      availableOn,
+      highlights,
+    },
+    jurisdiction,
+  })
+
+  return { success: true, result }
+}
 
 export async function incrementListingView(slug: string): Promise<void> {
   const service = getServiceRoleClient()
