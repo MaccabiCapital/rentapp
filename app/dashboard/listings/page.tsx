@@ -4,8 +4,7 @@
 
 import Link from 'next/link'
 import { getListingsByOwner } from '@/app/lib/queries/listings'
-import { getSyndicationFeedSettings } from '@/app/actions/syndication'
-import { SyndicationFeedCard } from '@/app/ui/syndication-feed-card'
+import { getMyFeed } from '@/app/lib/queries/syndication'
 
 function formatCurrency(value: number | null) {
   if (value === null) return '—'
@@ -26,9 +25,9 @@ function formatDate(value: string | null) {
 }
 
 export default async function ListingsPage() {
-  const [listings, feedSettings] = await Promise.all([
+  const [listings, feed] = await Promise.all([
     getListingsByOwner(),
-    getSyndicationFeedSettings(),
+    getMyFeed(),
   ])
 
   const active = listings.filter((l) => l.is_active)
@@ -44,18 +43,21 @@ export default async function ListingsPage() {
             Craigslist, or print the QR code for a yard sign.
           </p>
         </div>
-        <Link
-          href="/dashboard/listings/new"
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        >
-          Create listing
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/listings/syndication"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            {feed?.is_active ? 'Syndication ✓' : 'Set up syndication'}
+          </Link>
+          <Link
+            href="/dashboard/listings/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
+            Create listing
+          </Link>
+        </div>
       </div>
-
-      <SyndicationFeedCard
-        token={feedSettings.token}
-        generatedAt={feedSettings.generatedAt}
-      />
 
       {listings.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-12 text-center">

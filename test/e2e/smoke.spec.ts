@@ -22,6 +22,7 @@ const SIDEBAR_PATHS: Array<{ label: string; path: string }> = [
   { label: 'Workflows', path: '/dashboard/workflows' },
   { label: 'Properties', path: '/dashboard/properties' },
   { label: 'Listings', path: '/dashboard/listings' },
+  { label: 'Syndication', path: '/dashboard/listings/syndication' },
   { label: 'Inspections', path: '/dashboard/properties/inspections' },
   { label: 'Maintenance', path: '/dashboard/properties/maintenance' },
   { label: 'Insurance', path: '/dashboard/properties/insurance' },
