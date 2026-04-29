@@ -40,6 +40,7 @@ const SIDEBAR_PATHS: Array<{ label: string; path: string }> = [
   { label: 'My Team', path: '/dashboard/settings/team' },
   { label: 'Compliance', path: '/dashboard/compliance' },
   { label: 'Settings', path: '/dashboard/settings' },
+  { label: 'Settings → API', path: '/dashboard/settings/api' },
 ]
 
 const WORKFLOW_PATHS = [

@@ -10,6 +10,7 @@ const TABS = [
   { href: '/dashboard/settings/company', label: 'Company' },
   { href: '/dashboard/settings/team', label: 'Team' },
   { href: '/dashboard/settings/sms', label: 'SMS' },
+  { href: '/dashboard/settings/api', label: 'API' },
 ]
 
 export default async function SettingsLayout({
