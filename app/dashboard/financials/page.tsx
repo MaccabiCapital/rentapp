@@ -73,8 +73,16 @@ export default async function FinancialsPage({
           <Link
             href={`/dashboard/financials/export?from=${fromDate}&to=${toDate}`}
             className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            title="Flat CSV organized by IRS Schedule E line numbers"
           >
-            Export CSV
+            Schedule E CSV
+          </Link>
+          <Link
+            href={`/dashboard/financials/export-gl?from=${fromDate}&to=${toDate}`}
+            className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            title="Double-entry GL — imports into QuickBooks, Xero, Wave, FreshBooks"
+          >
+            Accounting CSV
           </Link>
           <a
             href={`/dashboard/financials/tax-package?from=${fromDate}&to=${toDate}`}
