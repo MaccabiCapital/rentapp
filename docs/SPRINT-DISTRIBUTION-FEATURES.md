@@ -264,13 +264,69 @@ API + webhooks are **Mid tier and up** ($80/mo+). Solo/Small don't need it; if t
 
 ## Order of work
 
-1. **Phase 1 (Syndication)** — DB migration + feed routes + admin UI. ~3 hours.
-2. **Phase 2a (CSV)** — single export route + UI download button. ~1 hour.
+1. **Phase 1 (Syndication)** — DB migration + feed routes + admin UI. ~3 hours. ✅ shipped
+2. **Phase 2a (CSV)** — single export route + UI download button. ~1 hour. ✅ shipped
 3. **Phase 2b (QBO OAuth + sync)** — biggest. OAuth flow + token refresh + sync engine + UI. ~6 hours.
 4. **Phase 2c (Xero)** — adapter pattern matches 2b. ~3 hours.
-5. **Phase 3a (API)** — key model + auth middleware + 12 read endpoints + docs page. ~5 hours.
+5. **Phase 3a (API)** — key model + auth middleware + read endpoints + docs page. ~5 hours. ✅ shipped (5 endpoints; rest in v1.1)
 6. **Phase 3b (Webhooks)** — endpoint + delivery + retry worker. ~4 hours.
 
 Total: ~22 hours of focused work. Will land as 6 commits, one per phase.
 
-This session: Phase 1 + Phase 2a + scaffold of Phase 3a. Phases 2b/2c/3b are larger and need a follow-up session each.
+Shipped this session: Phase 1, Phase 2a, Phase 3a. Phases 2b/2c/3b are
+larger and need a follow-up session each.
+
+---
+
+## Deferred validation: Zillow feed acceptance test
+
+The XML feeds are structurally correct (per `test/e2e/syndication.spec.ts`).
+What we have NOT yet validated is whether Zillow's strict parser actually
+accepts the format end-to-end. Two reasons to defer:
+
+1. **No real listings yet.** The 2 active listings in our DB are smoke-test
+   data. Pasting smoke-test addresses into Zillow's portal would either
+   create real public ghost listings or get the feed flagged as low-quality.
+2. **Zillow's partner program has portfolio minimums.** Some tiers require
+   you to own 3+ rental properties before they'll start crawling. Worth
+   confirming the rules at apply-time.
+
+### When to revisit
+
+Trigger condition: **Rentbase has its first paying landlord with 1+ real
+active listing.** That landlord becomes the natural test bed:
+
+1. Have them enable syndication in `/dashboard/listings/syndication`.
+2. Take their **production Zillow feed URL** (the `zillow.xml` one) and
+   paste it into Zillow's free feed validator at <https://www.zillow.com/rental-manager/feeds/>.
+   Zillow's parser will report any field they expect that we're missing,
+   any format they want differently, and any data validation errors (e.g.,
+   `Bedrooms` must be 0-10, `Rent` must be positive integer, etc.).
+
+3. Fix any gaps in `app/lib/syndication/xml-builders.ts` based on the
+   validator output.
+
+4. Submit the feed to Zillow Rental Network for approval. Approval
+   typically takes 1–3 business days.
+
+5. Once approved, watch `syndication_portal_status.last_crawled_at` to
+   confirm crawls land. The user-agent → portal-name heuristic in
+   `detectPortalFromUserAgent()` may need adjustment based on Zillow's
+   actual UA string.
+
+6. Repeat for Apartments.com partner portal (different submission URL,
+   uses the `rentalsource.xml` feed).
+
+### What to NOT do until we have a real listing
+
+- Submit the test/smoke-data feed URL to any production aggregator
+- Pay for a Zillow Rental Network paid tier
+- Apply to Apartments.com partner program (requires existing portfolio)
+
+### Risk we're carrying
+
+If Zillow rejects our format on a field we didn't anticipate, we'll have
+to ship a fix and lose a day on first-customer onboarding. To mitigate:
+when we DO have a real listing, run the Zillow validator FIRST before
+submitting for partner approval. Validator is free and instant; partner
+approval takes days.
